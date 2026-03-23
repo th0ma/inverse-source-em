@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inverse-source-em"
+version = "0.1.0"
+description = "Unified forward models, surrogate models, and inverse EM pipelines."
+authors = [
+    { name = "Thomas D. Papadopoulos", email = "thomas.d.papadopoulos@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "torch",
+    "tqdm",
+    "scikit-learn",
+    "matplotlib",
+    "seaborn",
+    "joblib",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

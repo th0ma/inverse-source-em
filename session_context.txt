@@ -1,0 +1,211 @@
+PROJECT: inverse-source-em
+AUTHOR: Thomas D. Papadopoulos, e-mail: thomas.d.papadopoulos@gmail.com
+
+DESCRIPTION
+-----------
+Το inverse-source-em είναι ένα scientific ML project για:
+- surrogate EM forward models,
+- inverse classification του πλήθους πηγών (1 έως 5),
+- inverse source localization για 1, 2, 3 πηγές.
+
+CANONICAL RULE
+--------------
+Το surrogate pipeline έχει ολοκληρωθεί επιτυχώς και δεν αλλάζει στο εξής.
+Αποτελεί το reference baseline για όλα τα επόμενα στάδια.
+
+SURROGATE PIPELINE (CANONICAL)
+------------------------------
+Βρίσκεται στο src/inverse_source_em/surrogate/ και περιλαμβάνει:
+
+1. surrogate.py
+   - SurrogateEM
+   - SurrogateMLP
+   - batch_Esurf / batch_Hsurf
+   - Esurf / Hsurf unified API
+
+2. surrogate_wrapper.py
+   - PhysicsTM-compatible wrapper
+   - Esurf, Hsurf, batch_forward
+
+3. sampling_surrogate.py
+   - sample_sources(N, R, rho_min, rho_max)
+   - sample_angles(M)
+
+4. generator_surrogate.py
+   - SurrogateDataGenerator
+   - generate(kind, n_sources)
+   - save_npz
+
+Αυτά τα αρχεία είναι canonical και δεν τροποποιούνται.
+
+CLASSIFICATION PIPELINE (ACTIVE DEVELOPMENT)
+--------------------------------------------
+Βρίσκεται στο src/inverse_source_em/data/ και περιλαμβάνει:
+
+- sampling_classification.py
+- generator_classification.py
+- dataset_classification.py
+
+Το classification pipeline έχει διαφορετική φυσική από το surrogate:
+- χρησιμοποιεί intensity I,
+- χρησιμοποιεί dicts για πηγές,
+- υποστηρίζει πολλαπλές πηγές,
+- δεν μοιράζεται sampling με το surrogate.
+
+CURRENT STATE
+-------------
+Έχουμε ολοκληρώσει:
+- την παραγωγή δειγμάτων για το classification pipeline,
+- το classification training (ResNet1D baseline),
+- την αξιολόγηση σε test set.
+
+Baseline αποτελέσματα:
+- Best validation accuracy: ~0.9841
+- Test accuracy: ~0.9846
+- Confusion matrix και classification report σταθερά και συμβατά με το παλιό framework.
+
+Το classification pipeline θεωρείται πλέον σταθερό και reproducible.
+
+NEXT STEP
+---------
+1. Προσθήκη evaluation notebook στο project root:
+   - classification_evaluation.ipynb
+   - περιλαμβάνει φόρτωση μοντέλου, test evaluation, plots, confusion matrix.
+
+2. Προετοιμασία για GitHub:
+   - καθαρό README
+   - project structure
+   - installation instructions
+   - versioning (v1.0.0 baseline)
+
+3. Προετοιμασία για pip packaging:
+   - pyproject.toml
+   - minimal dependencies
+   - module exports
+
+4. Μετά το GitHub release:
+   - αρχίζουν τα experiments (LeakyReLU, GELU, διαφορετικά architectures, curriculum learning, κ.λπ.)
+
+WORKFLOW SUMMARY
+----------------
+1. Surrogate pipeline → ολοκληρωμένο και σταθερό.
+2. Classification pipeline → ολοκληρωμένο (dataset + training + evaluation).
+3. Localization pipeline → θα ακολουθήσει μετά το GitHub release.
+
+PACKAGE STRUCTURE
+-----------------
+src/inverse_source_em/
+    surrogate/
+    physics/
+    data/
+    training/
+    utils/
+
+API RULE
+--------
+Surrogate και classification pipelines παραμένουν ξεχωριστά.
+Το data/__init__.py εκθέτει μόνο τα απαραίτητα public symbols.
+
+
+
+Project Tree
+------------
++---inverse-source-em
+    ¦   .gitignore
+    ¦   LICENSE
+    ¦   make_classification_dataset.py
+    ¦   make_surrogate_dataset.py
+    ¦   physics_vs_surrogate.ipynb
+    ¦   pyproject.toml
+    ¦   README.md
+    ¦   requirements.txt
+    ¦   session_context.txt
+    ¦   train_surrogate_models.py
+    ¦   tree.txt
+    ¦   
+    +---.ipynb_checkpoints
+    ¦       LICENSE-checkpoint
+    ¦       physics_vs_surrogate-checkpoint.ipynb
+    ¦       README-checkpoint.md
+    ¦       
+    +---data
+    ¦   +---classification
+    ¦   ¦       dataset_classification.npz
+    ¦   ¦       scaler_channel_0.pkl
+    ¦   ¦       scaler_channel_1.pkl
+    ¦   ¦       scaler_channel_2.pkl
+    ¦   ¦       scaler_channel_3.pkl
+    ¦   ¦       
+    ¦   +---surrogate
+    ¦           Esurf.npz
+    ¦           Hsurf.npz
+    ¦           
+    +---models
+    ¦       surrogate_Esurf.pth
+    ¦       surrogate_Hsurf.pth
+    ¦       
+    +---src
+    ¦   +---inverse_source_em
+    ¦   ¦   ¦   __init__.py
+    ¦   ¦   ¦   
+    ¦   ¦   +---data
+    ¦   ¦   ¦   ¦   dataset_classification.py
+    ¦   ¦   ¦   ¦   dataset_surrogate.py
+    ¦   ¦   ¦   ¦   generator_classification.py
+    ¦   ¦   ¦   ¦   generator_surrogate.py
+    ¦   ¦   ¦   ¦   sampling_classification.py
+    ¦   ¦   ¦   ¦   sampling_surrogate.py
+    ¦   ¦   ¦   ¦   __init__.py
+    ¦   ¦   ¦   ¦   
+    ¦   ¦   ¦   +---__pycache__
+    ¦   ¦   ¦           dataset_classification.cpython-313.pyc
+    ¦   ¦   ¦           dataset_surrogate.cpython-313.pyc
+    ¦   ¦   ¦           generator_classification.cpython-313.pyc
+    ¦   ¦   ¦           generator_surrogate.cpython-313.pyc
+    ¦   ¦   ¦           sampling_classification.cpython-313.pyc
+    ¦   ¦   ¦           sampling_surrogate.cpython-313.pyc
+    ¦   ¦   ¦           __init__.cpython-313.pyc
+    ¦   ¦   ¦           
+    ¦   ¦   +---physics
+    ¦   ¦   ¦   ¦   physics_tm.py
+    ¦   ¦   ¦   ¦   __init__.py
+    ¦   ¦   ¦   ¦   
+    ¦   ¦   ¦   +---__pycache__
+    ¦   ¦   ¦           physics_tm.cpython-313.pyc
+    ¦   ¦   ¦           __init__.cpython-313.pyc
+    ¦   ¦   ¦           
+    ¦   ¦   +---surrogate
+    ¦   ¦   ¦   ¦   mlp_surrogate.py
+    ¦   ¦   ¦   ¦   surrogate.py
+    ¦   ¦   ¦   ¦   surrogate_wrapper.py
+    ¦   ¦   ¦   ¦   __init__.py
+    ¦   ¦   ¦   ¦   
+    ¦   ¦   ¦   +---__pycache__
+    ¦   ¦   ¦           mlp_surrogate.cpython-313.pyc
+    ¦   ¦   ¦           surrogate.cpython-313.pyc
+    ¦   ¦   ¦           surrogate_wrapper.cpython-313.pyc
+    ¦   ¦   ¦           __init__.cpython-313.pyc
+    ¦   ¦   ¦           
+    ¦   ¦   +---training
+    ¦   ¦   ¦   ¦   train_surrogate.py
+    ¦   ¦   ¦   ¦   __init__.py
+    ¦   ¦   ¦   ¦   
+    ¦   ¦   ¦   +---__pycache__
+    ¦   ¦   ¦           train_surrogate.cpython-313.pyc
+    ¦   ¦   ¦           __init__.cpython-313.pyc
+    ¦   ¦   ¦           
+    ¦   ¦   +---utils
+    ¦   ¦   ¦       __init__.py
+    ¦   ¦   ¦       
+    ¦   ¦   +---__pycache__
+    ¦   ¦           __init__.cpython-313.pyc
+    ¦   ¦           
+    ¦   +---inverse_source_em.egg-info
+    ¦           dependency_links.txt
+    ¦           PKG-INFO
+    ¦           requires.txt
+    ¦           SOURCES.txt
+    ¦           top_level.txt
+    ¦           
+    +---__pycache__
+            physics_old.cpython-313.pyc

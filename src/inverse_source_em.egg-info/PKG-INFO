@@ -1,0 +1,27 @@
+Metadata-Version: 2.4
+Name: inverse-source-em
+Version: 0.1.0
+Summary: Unified forward models, surrogate models, and inverse EM pipelines.
+Author-email: Thomas <example@example.com>
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: torch
+Requires-Dist: tqdm
+Requires-Dist: scikit-learn
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: joblib
+Dynamic: license-file
+
+# Inverse Source EM
+
+This repository contains code for the forward and inverse source problem in
+cylindrical electromagnetic scattering. It combines analytical solvers
+(PhysicsTM) with neural surrogate models (SurrogateEM) and classification
+networks for estimating the number of internal sources.
+
+The project is currently in the process of being migrated from Jupyter
+notebooks to a clean, modular Python codebase.
