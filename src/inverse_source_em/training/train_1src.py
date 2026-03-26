@@ -25,7 +25,7 @@ print("Using device:", device)
 # ------------------------------------------------------------
 # Load dataset
 # ------------------------------------------------------------
-DATA_PATH = "data/regression/dataset_1src.npz"
+DATA_PATH = "data/regression_1src/dataset_1src.npz"
 print("Loading dataset:", DATA_PATH)
 
 dataset = Regression1SrcDataset(DATA_PATH, device=device)
@@ -151,7 +151,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 # ------------------------------------------------------------
 # Training loop
 # ------------------------------------------------------------
-CHECKPOINT_DIR = "checkpoints/regression_1src"
+CHECKPOINT_DIR = "models/regression_1src"
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 best_val_loss = float("inf")

@@ -30,7 +30,7 @@ PATH_E = "models/surrogate_Esurf.pth"
 PATH_H = "models/surrogate_Hsurf.pth"
 
 # Output dataset path
-SAVE_PATH = "data/regression/dataset_1src.npz"
+SAVE_PATH = "data/regression_1scr/dataset_1src.npz"
 
 
 # ------------------------------------------------------------
