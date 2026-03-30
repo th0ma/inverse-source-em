@@ -1,3 +1,31 @@
+"""
+accuracy.py — 3‑source regression accuracy evaluation.
+
+This module evaluates the clean (noise‑free) accuracy of the 3‑source
+regression model on a freshly generated evaluation dataset. Each sample
+contains three point sources with polar coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+The model predicts $\rho$, $\cos\phi$, $\sin\phi$ for each source. These
+are converted to Cartesian coordinates via:
+$$
+x = \rho \cos\phi, \qquad y = \rho \sin\phi
+$$
+
+The module reports:
+- $R^2$ scores for each source in Cartesian space
+- mean absolute error (MAE) over all coordinates
+
+Run as a standalone script:
+    python accuracy.py
+"""
+
+
+
 # ============================================================
 # accuracy.py — 3-source regression accuracy evaluation
 # ============================================================

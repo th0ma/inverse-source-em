@@ -1,34 +1,48 @@
 """
-Rotation Invariance Evaluation for Surrogate Models
+Rotation Invariance Evaluation for Surrogate Models.
 
-A physically correct TM forward model must satisfy rotational symmetry:
+A physically correct TM forward model must satisfy rotational symmetry with
+respect to the source azimuth φ_s. Rotating the source by an angle α should
+produce a corresponding shift in the angular dependence of the fields:
 
-    E(θ; φ_s + α)  ≈  E(θ - α; φ_s)
-    H(θ; φ_s + α)  ≈  H(θ - α; φ_s)
+    Esurf(rho, φ_s + α, θ)  ≈  Esurf(rho, φ_s, θ - α)
+    Hsurf(rho, φ_s + α, θ)  ≈  Hsurf(rho, φ_s, θ - α)
 
-In Fourier domain this corresponds to:
+In the Fourier domain this corresponds to a phase shift of the modal
+coefficients:
+
     F_rot[n] = F[n] * exp(-i n α)
 
-This module computes:
-- absolute rotation error
-- relative rotation error
+This module evaluates rotational consistency for:
+    - PhysicsTM
+    - SurrogateEM
+    - SurrogateWrapper
 
-for:
-- PhysicsTM
-- SurrogateEM
-- SurrogateWrapper
+For each model we compute:
+    - E_abs: max absolute rotation error
+    - E_rel: relative rotation error (normalized by max|E_ref|)
 
-Returns standardized metrics:
+Notes:
+    - Rotation is tested only with respect to φ_s, not θ.
+    - FFT is used to construct the theoretically rotated field E_ref(θ).
+    - This test checks physical symmetry, not numerical accuracy.
+    - Evaluation is performed over θ ∈ [0, 2π) with fixed resolution
+      (num_angles = 1024).
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "rotation",
     "status": "passed" | "failed",
     "metrics": {
-        "phys": {...},
-        "sur": {...},
-        "wrap": {...}
+        "phys": {"E_abs": ..., "E_rel": ..., "model_passed": ...},
+        "sur":  {"E_abs": ..., "E_rel": ..., "model_passed": ...},
+        "wrap": {"E_abs": ..., "E_rel": ..., "model_passed": ...}
     }
 }
 """
+
 
 import numpy as np
 

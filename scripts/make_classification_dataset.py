@@ -1,19 +1,38 @@
 """
 Generate classification datasets (1–5 sources) for the inverse_source_em package.
 
+This script constructs a supervised classification dataset for predicting the
+number of active sources S ∈ {1, 2, 3, 4, 5} from boundary field measurements.
+The dataset is generated using the surrogate forward model.
+
 Usage:
     python make_classification_dataset.py
-        -> uses defaults: 30 angles, balanced classes
+        → uses defaults: 30 angles, balanced classes
 
     python make_classification_dataset.py -a 64 -c 8000 8000 8000 16000 16000
-        -> custom angles + custom samples per class
+        → custom number of angles and custom samples per class
 
-This script:
-    1. Instantiates the surrogate forward model
-    2. Generates multi-source Esurf/Hsurf feature tensors
-    3. Saves train/val/test splits + scalers
-    4. Prints a validation report
+The script performs the following steps:
+    1. Instantiates the surrogate forward model (SurrogateEM + SurrogateWrapper)
+    2. Generates multi‑source Esurf/Hsurf feature tensors for S = 1..5
+    3. Builds train/val/test splits and saves them as a .npz file
+    4. Prints a validation report (shapes, dtypes, sanity checks)
+
+Output structure (saved to <out_dir>/classification_dataset.npz):
+    X_train : (N_train, 4, num_angles)
+    y_train : (N_train,)
+    X_val   : (N_val,   4, num_angles)
+    y_val   : (N_val,)
+    X_test  : (N_test,  4, num_angles)
+    y_test  : (N_test,)
+
+Notes:
+    - The surrogate forward model is used for fast dataset generation.
+    - The PhysicsTM model is instantiated only to obtain the domain radius R.
+    - The dataset includes both Esurf and Hsurf (real + imaginary parts).
+    - The script must be executed from the project root.
 """
+
 
 import argparse
 import numpy as np

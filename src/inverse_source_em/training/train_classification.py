@@ -1,3 +1,28 @@
+"""
+Training script for the source-count classification model (1–5 sources).
+
+This module provides:
+
+1. A PyTorch Dataset wrapper for classification data:
+       X : (N, 4, num_angles)
+       y : (N,) integer class labels
+
+2. Training utilities:
+       - train_one_epoch()
+       - evaluate_accuracy()
+
+3. A full training routine:
+       - Loads dataset_classification.npz
+       - Builds DataLoaders
+       - Instantiates SourceCountResNet1D
+       - Trains with Adam + cross-entropy
+       - Saves best model checkpoint
+       - Evaluates on test set
+       - Prints confusion matrix and classification report
+
+This script is intended to be run as a standalone training entrypoint.
+"""
+
 import os
 import numpy as np
 import torch
@@ -12,16 +37,25 @@ torch.set_default_dtype(torch.float64)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-# ------------------------------------------------------------
-# Dataset wrapper
-# ------------------------------------------------------------
+# ============================================================
+# 1. Dataset wrapper
+# ============================================================
+
 class ClassificationDataset(Dataset):
     """
     PyTorch dataset for source-count classification.
 
-    Expects:
-        X : (N, 4, NUM_ANGLES) float32/float64
-        y : (N,) int64 / int
+    Parameters
+    ----------
+    X : ndarray of shape (N, 4, num_angles)
+        Input boundary fields.
+    y : ndarray of shape (N,)
+        Integer class labels in {0,1,2,3,4}.
+
+    Notes
+    -----
+    - X is converted to float64 tensors.
+    - y is converted to torch.long for cross-entropy.
     """
 
     def __init__(self, X, y):
@@ -35,10 +69,30 @@ class ClassificationDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 
-# ------------------------------------------------------------
-# Training / evaluation utilities
-# ------------------------------------------------------------
+# ============================================================
+# 2. Training / evaluation utilities
+# ============================================================
+
 def train_one_epoch(model, loader, optimizer, device):
+    """
+    Train the model for one epoch.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Classification model.
+    loader : DataLoader
+        Training data loader.
+    optimizer : torch.optim.Optimizer
+        Optimizer instance.
+    device : str or torch.device
+        Device to train on.
+
+    Returns
+    -------
+    float
+        Average training loss for the epoch.
+    """
     model.train()
     total_loss = 0.0
 
@@ -59,6 +113,23 @@ def train_one_epoch(model, loader, optimizer, device):
 
 
 def evaluate_accuracy(model, loader, device):
+    """
+    Compute classification accuracy on a dataset.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Trained model.
+    loader : DataLoader
+        Evaluation data loader.
+    device : str or torch.device
+        Device to evaluate on.
+
+    Returns
+    -------
+    float
+        Accuracy in [0,1].
+    """
     model.eval()
     correct = 0
 
@@ -74,10 +145,25 @@ def evaluate_accuracy(model, loader, device):
     return correct / len(loader.dataset)
 
 
-# ------------------------------------------------------------
-# Main training routine
-# ------------------------------------------------------------
+# ============================================================
+# 3. Main training routine
+# ============================================================
+
 def main():
+    """
+    Train the source-count classifier and evaluate on the test set.
+
+    Steps
+    -----
+    1. Load dataset_classification.npz
+    2. Build train/val/test DataLoaders
+    3. Instantiate SourceCountResNet1D
+    4. Train for EPOCHS epochs
+    5. Save best model (highest val accuracy)
+    6. Evaluate on test set
+    7. Print confusion matrix + classification report
+    """
+
     # Paths
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
     data_path = os.path.join(root_dir, "data", "classification", "dataset_classification.npz")

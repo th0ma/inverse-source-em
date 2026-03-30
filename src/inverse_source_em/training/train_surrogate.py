@@ -1,24 +1,33 @@
 """
 Training utilities for surrogate models.
 
-This module provides:
-    - Dataset loading (NPZ)
-    - Train/validation split
-    - DataLoaders
-    - Training loop with:
-        * Adam optimizer
-        * MSE loss
-        * ReduceLROnPlateau scheduler
-        * Early stopping
-    - Model checkpoint saving
+This module provides a complete training pipeline for surrogate forward
+models (Esurf, Hsurf). It includes:
 
-Typical usage:
-    from inverse_source_em.surrogate import SurrogateMLP
-    from inverse_source_em.training import train_surrogate, load_surrogate_dataset
+1. Dataset loading from NPZ files
+   - X : input features
+   - Y : target fields
+   - automatic train/validation split
+   - PyTorch DataLoaders
 
-    train_loader, val_loader = load_surrogate_dataset("Esurf.npz")
-    model = SurrogateMLP()
-    train_surrogate(model, train_loader, val_loader, "surrogate_Esurf.pth")
+2. Training loop with:
+   - Adam optimizer
+   - MSE loss
+   - ReduceLROnPlateau scheduler
+   - Early stopping
+   - Best-model checkpoint saving
+
+Typical usage
+-------------
+>>> from inverse_source_em.surrogate import SurrogateMLP
+>>> from inverse_source_em.training import load_surrogate_dataset, train_surrogate
+>>>
+>>> train_loader, val_loader = load_surrogate_dataset("Esurf.npz")
+>>> model = SurrogateMLP()
+>>> train_surrogate(model, train_loader, val_loader, "surrogate_Esurf.pth")
+
+This module is intentionally simple and stable, since surrogate training
+is a foundational step for all downstream inverse problems.
 """
 
 import os
@@ -28,9 +37,10 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, random_split
 
 
-# ------------------------------------------------------------
-# Dataset loader
-# ------------------------------------------------------------
+# ============================================================
+# 1. Dataset loader
+# ============================================================
+
 def load_surrogate_dataset(
     filename: str,
     data_dir: str = "data/surrogate",
@@ -45,19 +55,27 @@ def load_surrogate_dataset(
     ----------
     filename : str
         Name of the NPZ file (e.g., "Esurf.npz").
-    data_dir : str
+    data_dir : str, optional
         Directory containing the dataset.
-    val_ratio : float
-        Fraction of samples to use for validation.
-    batch_size : int
+    val_ratio : float, optional
+        Fraction of samples used for validation.
+    batch_size : int, optional
         Batch size for DataLoaders.
-    device : torch.device or None
+    device : torch.device or None, optional
         If provided, tensors are moved to this device.
 
     Returns
     -------
     train_loader : DataLoader
+        Training DataLoader.
     val_loader : DataLoader
+        Validation DataLoader.
+
+    Notes
+    -----
+    - X and Y are loaded as float64 tensors for numerical stability.
+    - The dataset is randomly split into train/validation subsets.
+    - Shuffling is enabled only for the training loader.
     """
 
     path = os.path.join(data_dir, filename)
@@ -88,9 +106,10 @@ def load_surrogate_dataset(
     return train_loader, val_loader
 
 
-# ------------------------------------------------------------
-# Training loop
-# ------------------------------------------------------------
+# ============================================================
+# 2. Training loop
+# ============================================================
+
 def train_surrogate(
     model: nn.Module,
     train_loader: DataLoader,
@@ -114,19 +133,25 @@ def train_surrogate(
         Validation data.
     save_path : str
         Path to save the best model checkpoint.
-    lr : float
-        Learning rate.
-    max_epochs : int
+    lr : float, optional
+        Learning rate for Adam optimizer.
+    max_epochs : int, optional
         Maximum number of epochs.
-    patience : int
+    patience : int, optional
         Early stopping patience.
-    device : torch.device or None
+    device : torch.device or None, optional
         Device to train on.
 
     Returns
     -------
     best_val_loss : float
-        Best validation loss achieved.
+        Best validation loss achieved during training.
+
+    Notes
+    -----
+    - The model is trained in float64 for consistency with surrogate data.
+    - ReduceLROnPlateau halves the LR when validation loss plateaus.
+    - Early stopping prevents overfitting and unnecessary computation.
     """
 
     if device is not None:
@@ -144,7 +169,9 @@ def train_surrogate(
     print(f"Training surrogate → saving best model to: {save_path}")
 
     for epoch in range(1, max_epochs + 1):
+        # -------------------------
         # Training
+        # -------------------------
         model.train()
         train_loss = 0.0
         for Xb, Yb in train_loader:
@@ -156,7 +183,9 @@ def train_surrogate(
             train_loss += loss.item() * len(Xb)
         train_loss /= len(train_loader.dataset)
 
+        # -------------------------
         # Validation
+        # -------------------------
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
@@ -170,7 +199,9 @@ def train_surrogate(
 
         print(f"Epoch {epoch:03d} | Train: {train_loss:.6e} | Val: {val_loss:.6e}")
 
+        # -------------------------
         # Early stopping
+        # -------------------------
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             epochs_no_improve = 0

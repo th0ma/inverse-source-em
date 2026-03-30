@@ -1,17 +1,26 @@
 """
-dataset_2src.py
-
 Unified dataset builder for the two-source inverse EM problem.
-Generates (X, Y) pairs using the surrogate forward model and
-the sampling utilities.
 
-Produces:
-    - X: (N, 120) feature matrix
-    - Y: (N, 4)   normalized Cartesian labels
-    - train/test split
-    - MinMax normalization
-    - compressed .npz dataset
-    - saved scalers (joblib)
+This module generates a full dataset for the 2‑source localization problem
+using the surrogate forward model. Each sample consists of:
+
+    X : (120,) feature vector
+        Flattened boundary fields:
+            [Re(E), Im(E), Re(H), Im(H)] over all observation angles
+
+    Y : (4,) normalized Cartesian labels
+        True source parameters:
+            [x1, y1, x2, y2]
+
+The pipeline performs:
+- surrogate-based forward evaluation
+- train/test split
+- MinMax normalization for X and Y
+- saving the dataset in compressed NPZ format
+- saving the fitted scalers (joblib)
+
+The output is fully compatible with the training pipeline for the 2‑source
+regression model.
 """
 
 import os
@@ -40,27 +49,41 @@ def build_dataset_2src(
     dataset_name="dataset_2src.npz"
 ):
     """
-    Build a full two-source dataset and save it to disk.
+    Build and save a full two-source inverse EM dataset.
+
+    This function:
+    - loads the surrogate forward model
+    - generates N_samples synthetic examples
+    - splits into train/test subsets
+    - applies MinMax normalization to X and Y
+    - saves the dataset and scalers to disk
 
     Parameters
     ----------
     N_samples : int
         Number of samples to generate.
-    theta : ndarray
-        Observation angles (num_angles,)
+    theta : ndarray of shape (num_angles,)
+        Observation angles in radians.
     path_E, path_H : str
-        Paths to surrogate .pth files.
-    test_size : float
-        Fraction of samples used for testing.
-    out_dir : str
+        Paths to the trained surrogate .pth files for Esurf and Hsurf.
+    test_size : float, optional
+        Fraction of samples used for testing. Default is 0.30.
+    out_dir : str, optional
         Output directory for dataset and scalers.
-    dataset_name : str
-        Name of the saved .npz file.
+    dataset_name : str, optional
+        Name of the saved NPZ dataset file.
 
     Returns
     -------
     dataset_path : str
-        Path to the saved dataset.
+        Full path to the saved dataset file.
+
+    Notes
+    -----
+    - X has shape (N, 120) assuming 30 angles × 4 channels.
+    - Y has shape (N, 4) containing normalized Cartesian coordinates.
+    - MinMaxScaler is used for both X and Y.
+    - The surrogate wrapper is loaded via load_surrogate().
     """
 
     os.makedirs(out_dir, exist_ok=True)

@@ -11,9 +11,17 @@ Usage:
 This script:
     1. Instantiates the PhysicsTM solver
     2. Generates Esurf and Hsurf surrogate datasets
-    3. Saves them into data/surrogate/
-    4. Prints a validation report (shapes, dtypes, min/max)
+    3. Saves them into data/surrogate/ as .npz files
+    4. Each .npz file contains:
+         - X: array of shape (N*M, 5)
+         - Y: array of shape (N*M, 2)
+    5. Prints a validation report (shapes, dtypes, min/max)
+
+Notes:
+    - Must be executed from the project root directory.
+    - Requires the inverse_source_em package to be installed (pip install -e .).
 """
+
 
 import argparse
 import numpy as np

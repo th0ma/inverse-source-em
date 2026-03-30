@@ -1,12 +1,16 @@
 """
 Sampling utilities for Regression Problem I (single-source localization).
 
-This module provides:
-- Uniform sampling of a single source in the disk (rho, phi → x, y)
-- Uniform sampling of observation angles
-- Reproducible random generation
+This module provides the sampling routines used to generate training data
+for the 1‑source localization regression problem. It includes:
 
-The sampling logic is intentionally simple and physics‑consistent.
+- Uniform sampling of a single source inside a disk (annulus)
+- Conversion from polar (rho, phi) to Cartesian (x, y)
+- Uniform sampling of observation angles
+- Optional reproducible seeding
+
+The sampling logic is intentionally simple, physics‑consistent, and matches
+the assumptions used in the analytical and surrogate forward models.
 """
 
 import numpy as np
@@ -18,7 +22,17 @@ import numpy as np
 
 def set_seed(seed: int) -> None:
     """
-    Set numpy random seed for reproducible sampling.
+    Set NumPy's global random seed for reproducible sampling.
+
+    Parameters
+    ----------
+    seed : int
+        Seed value for NumPy's RNG.
+
+    Notes
+    -----
+    - This affects all subsequent NumPy random operations.
+    - For per-function reproducibility, prefer using np.random.Generator.
     """
     np.random.seed(seed)
 
@@ -34,23 +48,42 @@ def sample_sources_1src(
     rho_max: float = 0.95,
 ):
     """
-    Sample N single sources uniformly in the disk (annulus).
+    Sample N single sources uniformly in an annular region of a disk.
+
+    The sampling domain is:
+        rho ∈ [rho_min * R, rho_max * R]
+        phi ∈ [0, 2π)
+
+    The radial coordinate is sampled using sqrt() so that the resulting
+    distribution is uniform with respect to area (i.e., uniform density
+    in the disk annulus).
 
     Parameters
     ----------
     N : int
-        Number of samples.
-    R : float
-        Disk radius.
-    rho_min, rho_max : float
-        Minimum and maximum radial distance as fractions of R.
+        Number of samples to generate.
+    R : float, optional
+        Disk radius. Default is 1.0.
+    rho_min, rho_max : float, optional
+        Minimum and maximum normalized radial distance (fractions of R).
 
     Returns
     -------
-    rho : (N,) ndarray
-    phi : (N,) ndarray
-    x   : (N,) ndarray
-    y   : (N,) ndarray
+    rho : ndarray of shape (N,)
+        Radial coordinates of sampled sources.
+    phi : ndarray of shape (N,)
+        Angular coordinates in radians.
+    x : ndarray of shape (N,)
+        Cartesian x-coordinates of sampled sources.
+    y : ndarray of shape (N,)
+        Cartesian y-coordinates of sampled sources.
+
+    Notes
+    -----
+    - The sampling is rotationally symmetric and area-uniform.
+    - Cartesian coordinates are computed via:
+          x = rho * cos(phi)
+          y = rho * sin(phi)
     """
     # Uniform in area: sample r^2 uniformly
     r2_min = (rho_min / R) ** 2
@@ -72,7 +105,7 @@ def sample_sources_1src(
 
 def sample_angles(M: int):
     """
-    Uniform sampling of M observation angles in [0, 2π).
+    Uniformly sample M observation angles in [0, 2π).
 
     Parameters
     ----------
@@ -81,6 +114,12 @@ def sample_angles(M: int):
 
     Returns
     -------
-    theta_obs : (M,) ndarray
+    theta_obs : ndarray of shape (M,)
+        Uniformly spaced angles in radians.
+
+    Notes
+    -----
+    - The angles are returned in ascending order.
+    - endpoint=False ensures periodicity without duplication at 2π.
     """
     return np.linspace(0.0, 2 * np.pi, M, endpoint=False)

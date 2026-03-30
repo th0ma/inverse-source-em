@@ -1,33 +1,51 @@
 """
-Maxwell Consistency Evaluation for Surrogate Models
+Maxwell Consistency Evaluation for Surrogate Models.
 
-For TM polarization, the tangential magnetic field on the boundary satisfies:
+For TM polarization, the tangential magnetic field on the boundary satisfies
+the Maxwell boundary condition:
 
     H_surf(θ) = (1 / (ω μ0)) * ∂E/∂ρ |_{ρ=R}
 
-Using the series representation of E, we can reconstruct H_surf(θ) from the
-radial derivative of E at ρ = R and compare it to the model's H_surf(θ).
+Using the series representation of E, PhysicsTM can compute the radial
+derivative ∂E/∂ρ at ρ = R and reconstruct H_surf(θ). This provides a
+physically exact reference for checking whether a model's H_surf(θ)
+is consistent with its corresponding E_surf(θ).
 
-This module computes:
-- max absolute error between H_direct and H_from_E
-- relative error
+This module evaluates:
+    - PhysicsTM
+    - SurrogateEM
+    - SurrogateWrapper
 
-for:
-- PhysicsTM
-- SurrogateEM
-- SurrogateWrapper
+For each model we compute:
+    - H_direct(θ): the model's own H_surf(θ)
+    - H_from_E(θ): reconstructed from ∂E/∂ρ using PhysicsTM
 
-Returns standardized metrics:
+and measure:
+    - max absolute error
+    - relative error (normalized by max|H_direct|)
+
+Notes:
+    - H_from_E is always computed using PhysicsTM, even when evaluating
+      surrogate models.
+    - This test checks physical consistency between E and H, not numerical
+      accuracy with respect to PhysicsTM.
+    - Evaluation is performed over θ ∈ [0, 2π) with fixed resolution
+      (num_angles = 400).
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "maxwell",
     "status": "passed" | "failed",
     "metrics": {
-        "phys": {...},
-        "sur": {...},
-        "wrap": {...}
+        "phys": {"H_abs": ..., "H_rel": ..., "model_passed": ...},
+        "sur":  {"H_abs": ..., "H_rel": ..., "model_passed": ...},
+        "wrap": {"H_abs": ..., "H_rel": ..., "model_passed": ...}
     }
 }
 """
+
 
 import numpy as np
 from scipy.special import h1vp

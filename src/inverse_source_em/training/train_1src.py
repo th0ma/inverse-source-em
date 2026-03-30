@@ -1,6 +1,41 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+"""
+Training script for Regression Problem I (single-source localization).
+
+This script trains the MultitaskNet model to jointly predict:
+    - x, y : Cartesian coordinates of the source
+    - I    : source strength (intensity)
+
+The training objective combines three components:
+
+1. Localization loss (x, y):
+       L_xy = ||(x_pred, y_pred) - (x_true, y_true)||^2
+
+2. Strength loss (I):
+       L_I = ||I_pred - I_true||^2
+
+3. Field-consistency loss:
+       - Convert (x_pred, y_pred) → (rho_pred, phi_pred)
+       - Use surrogate forward model to compute predicted fields
+       - Compare to true normalized fields in X_fields
+
+All three losses are combined using heteroscedastic uncertainty weighting
+(Kendall & Gal, 2018), with learnable log-variance parameters:
+    s_xy, s_I, s_f
+
+The script performs:
+    - dataset loading
+    - train/validation split
+    - surrogate loading
+    - multitask loss computation
+    - Adam optimization
+    - ReduceLROnPlateau scheduling
+    - early stopping
+    - checkpoint saving
+"""
+
 import os
 import numpy as np
 import torch
@@ -66,12 +101,94 @@ print("R =", R)
 # Multitask loss
 # ------------------------------------------------------------
 def polar_from_cartesian(x, y):
+    """
+    Convert Cartesian coordinates (x, y) to polar coordinates (rho, phi).
+
+    Parameters
+    ----------
+    x : torch.Tensor of shape (B,)
+        Predicted x-coordinates.
+    y : torch.Tensor of shape (B,)
+        Predicted y-coordinates.
+
+    Returns
+    -------
+    rho : torch.Tensor of shape (B,)
+        Radial distance sqrt(x^2 + y^2).
+    phi : torch.Tensor of shape (B,)
+        Angle atan2(y, x) in radians.
+
+    Notes
+    -----
+    - This conversion is used to feed predictions into the surrogate
+      forward model for field-consistency loss.
+    """
     rho = torch.sqrt(x**2 + y**2)
     phi = torch.atan2(y, x)
     return rho, phi
 
 
 def multitask_loss(model_output, X_fields, Y_true, theta_obs, ymax_E, ymax_H):
+    """
+    Compute the multitask loss for Regression I.
+
+    The loss consists of three components:
+
+    1. Localization loss (x, y):
+           L_xy = ||(x_pred, y_pred) - (x_true, y_true)||^2
+
+    2. Strength loss (I):
+           L_I = ||I_pred - I_true||^2
+
+    3. Field-consistency loss:
+           - Convert (x_pred, y_pred) → (rho_pred, phi_pred)
+           - Use surrogate forward model to compute predicted fields
+           - Compare to true normalized fields in X_fields
+
+    All three losses are combined using heteroscedastic uncertainty
+    weighting with learnable log-variances (s_xy, s_I, s_f):
+
+        L_total =
+            0.5 * exp(-s_xy) * L_xy + 0.5 * s_xy +
+            0.5 * exp(-s_I)  * L_I  + 0.5 * s_I  +
+            0.5 * exp(-s_f)  * L_fields + 0.5 * s_f
+
+    Parameters
+    ----------
+    model_output : dict
+        Output of MultitaskNet:
+            {
+                "xy": (B, 2),
+                "I":  (B, 1),
+                "s_xy": scalar,
+                "s_I":  scalar,
+                "s_f":  scalar,
+                "h":    (B, hidden_dim)
+            }
+    X_fields : torch.Tensor of shape (B, 4*M)
+        True boundary fields:
+            [E_r, E_i, H_r, H_i] concatenated.
+    Y_true : torch.Tensor of shape (B, 3)
+        True regression targets: [x, y, I].
+    theta_obs : torch.Tensor of shape (M,)
+        Observation angles used by the surrogate.
+    ymax_E, ymax_H : float
+        Normalization constants for E and H fields.
+
+    Returns
+    -------
+    L_total : torch.Tensor (scalar)
+        Total multitask loss.
+    metrics : dict
+        Dictionary of scalar floats for logging:
+            "L_total", "L_xy", "L_I", "L_fields",
+            "s_xy", "s_I", "s_f"
+
+    Notes
+    -----
+    - The surrogate forward model is accessed via the global `sur` object.
+    - All computations use float64 for numerical stability.
+    """
     xy_pred = model_output["xy"]
     I_pred  = model_output["I"].view(-1)
 
@@ -166,7 +283,28 @@ print("Starting training...")
 
 
 def main():
+    """
+    Main training routine for Regression I.
 
+    Steps
+    -----
+    1. Load dataset_1src.npz via Regression1SrcDataset.
+    2. Split into training and validation subsets.
+    3. Load surrogate forward model (Esurf, Hsurf).
+    4. Instantiate MultitaskNet.
+    5. Train for up to 200 epochs with:
+           - Adam optimizer
+           - ReduceLROnPlateau scheduler
+           - Early stopping (patience = 20)
+    6. Save best-performing checkpoints.
+    7. Print training progress and validation loss.
+
+    Notes
+    -----
+    - The surrogate is used inside the loss function for field consistency.
+    - All tensors are cast to float64 for consistency with surrogate models.
+    - Checkpoints are saved in models/regression_1src/.
+    """
     global best_val_loss, epochs_no_improve
 
     for epoch in range(1, 201):

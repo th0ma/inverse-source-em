@@ -1,15 +1,29 @@
 """
-PhysicsTM: Analytical TM forward model for a dielectric cylinder
-with one internal line source. Fully vectorized (NumPy + SciPy).
+Analytical TM forward model for a dielectric cylinder with one internal line source.
 
-Unified forward API:
-- Esurf(rho_s, phi_s, theta_or_num_angles)
-- Hsurf(rho_s, phi_s, theta_or_num_angles)
+This module implements the canonical physics-based forward solver used throughout
+the inverse-source-em framework. It provides closed-form expressions for the
+tangential electric and magnetic fields on the boundary of a dielectric cylinder
+excited by a single internal TM line source.
 
-The third argument can be:
-- int: number of angles → uniform θ-grid in [0, 2π)
-- scalar: single observation angle θ → returns scalar
-- array: explicit θ-array → returns array
+The solver is fully vectorized (NumPy + SciPy) and exposes a unified forward API:
+
+    Esurf(rho_s, phi_s, theta_or_num_angles)
+    Hsurf(rho_s, phi_s, theta_or_num_angles)
+
+where the third argument may be:
+- int: number of observation angles → uniform grid in [0, 2π)
+- float: single observation angle
+- array-like: explicit array of observation angles
+
+All returned fields are complex-valued arrays representing the TM boundary fields
+(E_z and H_φ components) evaluated at the cylinder surface r = R.
+
+This analytical solver is used for:
+- validating surrogate models
+- generating surrogate training datasets
+- benchmarking physical consistency
+- providing ground-truth forward fields for regression pipelines
 """
 
 import numpy as np
@@ -19,7 +33,39 @@ from scipy.special import jv, jvp, hankel1, h1vp
 
 class PhysicsTM:
     """
-    Analytical TM forward solver for cylindrical scattering.
+    Analytical TM forward solver for cylindrical scattering with one internal line source.
+
+    This class computes the boundary electric and magnetic fields on a dielectric
+    cylinder of radius R, excited by a single TM line source located at
+    (rho_s, phi_s). The solution is expressed as a truncated cylindrical-harmonic
+    expansion using Bessel and Hankel functions.
+
+    Parameters
+    ----------
+    R : float, optional
+        Cylinder radius.
+    OMEGA : float, optional
+        Angular frequency ω.
+    EPS0 : float, optional
+        Permittivity of the exterior medium.
+    MU0 : float, optional
+        Permeability of the exterior medium.
+    EPS1 : float, optional
+        Permittivity of the interior medium.
+    MU1 : float, optional
+        Permeability of the interior medium.
+    N : int, optional
+        Truncation order of the cylindrical-harmonic expansion.
+        Total number of modes is 2N + 1.
+    I0 : float, optional
+        Source strength of the internal line source.
+
+    Notes
+    -----
+    - All computations are fully vectorized.
+    - Returned fields are complex-valued.
+    - Observation angles θ are always interpreted in radians.
+    - The solver is used as the ground-truth forward model throughout the project.
     """
 
     def __init__(self,
@@ -49,9 +95,36 @@ class PhysicsTM:
         self.nvals = np.arange(-self.N, self.N + 1, dtype=np.int64)
 
     def make_obs(self, num_angles):
+        """
+        Generate a uniform grid of observation angles in [0, 2π).
+
+        Parameters
+        ----------
+        num_angles : int
+            Number of observation angles.
+
+        Returns
+        -------
+        ndarray of shape (num_angles,)
+            Uniformly spaced angles in radians.
+        """
         return np.linspace(0.0, 2*np.pi, int(num_angles), endpoint=False)
 
     def alpha_n_vec(self, rho_s):
+        """
+        Compute the cylindrical-harmonic expansion coefficients α_n for a source
+        located at radial coordinate rho_s.
+
+        Parameters
+        ----------
+        rho_s : float
+            Radial coordinate of the internal line source.
+
+        Returns
+        -------
+        ndarray of shape (2N+1,)
+            Complex-valued expansion coefficients α_n.
+        """
         rho_s = float(rho_s)
         n = self.nvals
         R = self.R
@@ -69,6 +142,23 @@ class PhysicsTM:
         return num / den
 
     def Esurf_theta(self, rho_s, phi_s, theta_array):
+        """
+        Compute the boundary electric field E_surf(θ) for an explicit array of angles.
+
+        Parameters
+        ----------
+        rho_s : float
+            Radial coordinate of the source.
+        phi_s : float
+            Angular coordinate of the source.
+        theta_array : array-like
+            Observation angles in radians.
+
+        Returns
+        -------
+        ndarray of complex128, shape (len(theta_array),)
+            Complex electric field values at r = R.
+        """
         rho_s = float(rho_s)
         phi_s = float(phi_s)
 
@@ -84,6 +174,23 @@ class PhysicsTM:
         return np.complex128(self.A * self.I0) * field
 
     def Hsurf_theta(self, rho_s, phi_s, theta_array):
+        """
+        Compute the boundary magnetic field H_surf(θ) for an explicit array of angles.
+
+        Parameters
+        ----------
+        rho_s : float
+            Radial coordinate of the source.
+        phi_s : float
+            Angular coordinate of the source.
+        theta_array : array-like
+            Observation angles in radians.
+
+        Returns
+        -------
+        ndarray of complex128, shape (len(theta_array),)
+            Complex magnetic field values at r = R.
+        """
         rho_s = float(rho_s)
         phi_s = float(phi_s)
 
@@ -99,6 +206,25 @@ class PhysicsTM:
         return np.complex128(self.A * self.I0 / self.MU0) * field
 
     def Esurf(self, rho_s, phi_s, theta_or_num_angles=720):
+        """
+        Unified forward API for the boundary electric field.
+
+        Parameters
+        ----------
+        rho_s : float
+            Radial coordinate of the source.
+        phi_s : float
+            Angular coordinate of the source.
+        theta_or_num_angles : int, float, or array-like
+            - int: number of observation angles → uniform grid
+            - float: single angle
+            - array-like: explicit angle array
+
+        Returns
+        -------
+        complex or ndarray of complex
+            Electric field values at r = R.
+        """
         if isinstance(theta_or_num_angles, (int, np.integer)):
             obs = self.make_obs(int(theta_or_num_angles))
             return self.Esurf_theta(rho_s, phi_s, obs)
@@ -112,6 +238,25 @@ class PhysicsTM:
         return self.Esurf_theta(rho_s, phi_s, obs)
 
     def Hsurf(self, rho_s, phi_s, theta_or_num_angles=720):
+        """
+        Unified forward API for the boundary magnetic field.
+
+        Parameters
+        ----------
+        rho_s : float
+            Radial coordinate of the source.
+        phi_s : float
+            Angular coordinate of the source.
+        theta_or_num_angles : int, float, or array-like
+            - int: number of observation angles → uniform grid
+            - float: single angle
+            - array-like: explicit angle array
+
+        Returns
+        -------
+        complex or ndarray of complex
+            Magnetic field values at r = R.
+        """
         if isinstance(theta_or_num_angles, (int, np.integer)):
             obs = self.make_obs(int(theta_or_num_angles))
             return self.Hsurf_theta(rho_s, phi_s, obs)

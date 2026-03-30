@@ -1,10 +1,12 @@
 """
-Timing Evaluation for Source-Count Classification Model
+Timing Evaluation for Source-Count Classification Model.
 
-This module measures:
-- inference time per sample
-- throughput (samples per second)
-- batch-size scaling
+This module measures inference performance of the trained classifier under
+different batch sizes. It computes:
+
+    - inference time per sample (ms)
+    - throughput (samples per second)
+    - batch-size scaling (time per sample for batch sizes 1, 8, 32, 128)
 
 Returned structure:
 {
@@ -21,7 +23,13 @@ Returned structure:
         }
     }
 }
+
+Notes:
+    - A warmup pass is performed before timing to stabilize GPU/CPU performance.
+    - Timing is synchronized on CUDA devices to ensure accurate measurement.
+    - Status is 'failed' only if NaN/Inf values appear in the metrics.
 """
+
 
 import time
 import numpy as np

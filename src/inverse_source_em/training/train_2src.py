@@ -3,17 +3,25 @@ train_2src.py
 
 Training loop for the two-source inverse EM regression task.
 
-Uses:
-    - model_2src.TwoSourcePredictor (or any compatible model)
-    - loss_2src.structured_loss + TailWeightScheduler
+This module implements a production-grade training routine for the
+two-source localization model. It does NOT load data or define the model;
+instead, it provides a clean training function that accepts:
 
-This module does NOT load data or define the model; it only
-implements the training procedure given:
-    - model
-    - train_loader
-    - test_loader
-    - config
-    - device
+    - model          : nn.Module
+    - train_loader   : DataLoader
+    - test_loader    : DataLoader
+    - config         : dict of hyperparameters and loss weights
+    - device         : torch.device
+
+The training loop integrates:
+    - structured_loss (distance, angle, area constraints)
+    - dynamic tail-weight scheduling (p99-based)
+    - gradient clipping
+    - ReduceLROnPlateau scheduler
+    - full per-epoch logging (returned as a pandas DataFrame)
+
+This design allows flexible experimentation while keeping the training
+logic centralized and clean.
 """
 
 import numpy as np
@@ -26,7 +34,27 @@ from .loss_2src import TailWeightScheduler, structured_loss
 
 def build_tail_schedulers(config: dict):
     """
-    Build tail-weight schedulers from CONFIG.
+    Construct all tail-weight schedulers from the configuration dictionary.
+
+    Parameters
+    ----------
+    config : dict
+        Must contain sub-dictionaries:
+            - TAIL_SCHEDULER_DISTA
+            - TAIL_SCHEDULER_DISTB
+            - TAIL_SCHEDULER_ANGLEA
+            - TAIL_SCHEDULER_ANGLEB
+
+    Returns
+    -------
+    tuple
+        (sched_distA, sched_distB, sched_angleA, sched_angleB)
+
+    Notes
+    -----
+    Each scheduler dynamically adjusts the weight of a loss component
+    based on its 99th percentile error (p99). This helps stabilize
+    training by emphasizing difficult tail cases when needed.
     """
     sched_distA = TailWeightScheduler(config["TAIL_SCHEDULER_DISTA"])
     sched_distB = TailWeightScheduler(config["TAIL_SCHEDULER_DISTB"])
@@ -43,27 +71,55 @@ def train_model(
     device: torch.device,
 ):
     """
-    Production-grade training loop for the two-source regression model.
+    Full training loop for the two-source regression model.
 
     Parameters
     ----------
     model : nn.Module
+        The regression model (e.g., TwoSourcePredictor).
     train_loader : DataLoader
+        Training dataset loader.
     test_loader : DataLoader
+        Validation/test dataset loader.
     config : dict
         Must contain:
-            NUM_EPOCHS, PATIENCE, LEARNING_RATE, CLIP_NORM,
-            LAMBDA_AREA, LAMBDA_DISTA, LAMBDA_DISTB,
-            LAMBDA_ANGLEA, LAMBDA_ANGLEB,
-            TAIL_SCHEDULER_* configs
+            NUM_EPOCHS : int
+            PATIENCE : int
+            LEARNING_RATE : float
+            CLIP_NORM : float
+            LAMBDA_AREA : float
+            LAMBDA_DISTA : float
+            LAMBDA_DISTB : float
+            LAMBDA_ANGLEA : float
+            LAMBDA_ANGLEB : float
+            TAIL_SCHEDULER_DISTA : dict
+            TAIL_SCHEDULER_DISTB : dict
+            TAIL_SCHEDULER_ANGLEA : dict
+            TAIL_SCHEDULER_ANGLEB : dict
     device : torch.device
+        CPU or CUDA device.
 
     Returns
     -------
     best_model : nn.Module
-        Model loaded with best (lowest val_loss) weights.
-    logs_df : pd.DataFrame
-        Training log per epoch.
+        The model loaded with the best (lowest validation loss) weights.
+    logs_df : pandas.DataFrame
+        Per-epoch training log including:
+            - train_loss, val_loss
+            - learning rate
+            - gradient norm
+            - weighted loss components
+            - p99 diagnostics
+            - dynamic weights
+
+    Notes
+    -----
+    - The structured loss returns a dictionary of weighted components.
+      The training loop sums the components:
+          area + distA + distB + angleA + angleB
+    - Gradient clipping improves stability for deep MLPs.
+    - ReduceLROnPlateau lowers LR when validation loss plateaus.
+    - The best model is tracked via validation loss.
     """
 
     optimizer = torch.optim.Adam(
@@ -91,6 +147,7 @@ def train_model(
         total_loss = 0.0
         grad_norms = []
 
+        # Accumulators for logging
         acc = {
             "area": 0.0,
             "distA": 0.0,
@@ -143,6 +200,7 @@ def train_model(
             for k in acc:
                 acc[k] += loss_dict[k]
 
+        # Normalize accumulators
         for k in acc:
             v = acc[k]
             if hasattr(v, "item"):
@@ -180,6 +238,9 @@ def train_model(
         val_loss /= len(test_loader)
         scheduler.step(val_loss)
 
+        # -----------------------------
+        # LOGGING
+        # -----------------------------
         epoch_row = {
             "epoch": epoch,
             "train_loss": train_loss,
@@ -201,6 +262,7 @@ def train_model(
             "w_angleB": acc["w_angleB"],
         }
 
+        # Convert tensors to floats
         epoch_row = {
             k: (v.item() if hasattr(v, "item") else float(v))
             for k, v in epoch_row.items()
@@ -215,10 +277,12 @@ def train_model(
                 f"lr={epoch_row['lr']:.2e}"
             )
 
+        # Track best model
         if val_loss < best_loss:
             best_loss = val_loss
             best_state = model.state_dict()
 
+    # Load best weights
     if best_state is not None:
         model.load_state_dict(best_state)
 

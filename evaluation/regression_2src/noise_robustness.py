@@ -1,13 +1,26 @@
 """
-Noise robustness evaluation for 2‑source regression model.
+Noise‑robustness evaluation for the 2‑source regression model.
 
-Handles permutation invariance:
-For each sample, evaluates both assignments:
-    (predA→trueA, predB→trueB)
-    (predA→trueB, predB→trueA)
-and keeps the one with smaller total error.
+This module handles permutation invariance by evaluating both possible
+assignments between predicted and true sources:
 
-Returns:
+1. $\left(\text{predA}\rightarrow\text{trueA},\\,\text{predB}\rightarrow\text{trueB}\right)$
+2. $\left(\text{predA}\rightarrow\text{trueB},\\,\text{predB}\rightarrow\text{trueA}\right)$
+
+For each sample, the assignment with the smaller total distance error is kept.
+
+Gaussian noise is added to the input fields using feature‑wise scaling:
+$$
+X_{\mathrm{noisy}} = X + \sigma\,X_{\mathrm{std}}\,\varepsilon,
+\qquad
+\varepsilon \sim \mathcal{N}\left(0,\\,1\right)
+$$
+
+For each noise level $\sigma$, the module computes:
+- mean of the per‑sample maximum distance error
+- 99th‑percentile of the per‑sample maximum distance error
+
+Returned structure:
 {
     "module": "noise_robustness",
     "status": "passed" | "failed",
@@ -21,6 +34,7 @@ Returns:
     ]
 }
 """
+
 
 import numpy as np
 import torch

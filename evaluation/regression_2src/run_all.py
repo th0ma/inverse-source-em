@@ -1,14 +1,32 @@
 """
-Unified evaluation runner for 2‑source regression model.
+Unified evaluation runner for the 2‑source regression model.
 
-Runs:
-- accuracy
-- error_tables
-- noise_robustness
-- timing
+This script loads the trained model and the test split of the two‑source
+dataset, and executes the full evaluation suite:
 
-Returns a unified dictionary and prints a clean summary.
+- accuracy (permutation‑invariant)
+- error tables (detailed geometric errors)
+- noise robustness (Gaussian perturbations of the inputs)
+- timing (inference latency per batch and per sample)
+
+Permutation invariance is handled internally by each evaluation module using
+the two possible assignments:
+1. $\left(\text{predA}\rightarrow\text{trueA},\\,\text{predB}\rightarrow\text{trueB}\right)$
+2. $\left(\text{predA}\rightarrow\text{trueB},\\,\text{predB}\rightarrow\text{trueA}\right)$
+
+Returned structure:
+{
+    "module": "run_all",
+    "status": "passed" | "failed",
+    "results": {
+        "accuracy": {...},
+        "error_tables": {...},
+        "noise_robustness": {...},
+        "timing": {...}
+    }
+}
 """
+
 
 import os
 import numpy as np

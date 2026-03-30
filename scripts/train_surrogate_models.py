@@ -2,14 +2,23 @@
 Train surrogate models (Esurf and Hsurf) using the inverse_source_em package.
 
 This script:
-    - Automatically loads Esurf.npz and Hsurf.npz from data/surrogate/
-    - Trains two surrogate models (Esurf and Hsurf)
-    - Saves them into models/surrogate_Esurf.pth and surrogate_Hsurf.pth
-    - Uses fixed hyperparameters for reproducibility
+    - Loads Esurf.npz and Hsurf.npz from data/surrogate/
+    - Builds two SurrogateMLP models (one for Esurf, one for Hsurf)
+    - Trains each model with fixed hyperparameters for reproducibility
+    - Saves the trained weights into:
+         models/surrogate_Esurf.pth
+         models/surrogate_Hsurf.pth
+    - Automatically selects CPU or GPU depending on availability
 
 Usage:
     python train_surrogate_models.py
+
+Notes:
+    - Must be executed from the project root directory.
+    - Requires the surrogate datasets to already exist in data/surrogate/.
+    - Training uses early stopping (patience=20) and max_epochs=200.
 """
+
 
 import os
 import torch

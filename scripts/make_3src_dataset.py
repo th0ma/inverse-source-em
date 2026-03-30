@@ -1,10 +1,22 @@
 """
-Script: make_3src_dataset.py
-Generates the full 3-source regression dataset (stages 1-8).
+make_3src_dataset.py
 
-This script is a thin wrapper around:
+Top‑level script for generating the full 3‑source regression datasets
+(stages 1–8). This script is a thin wrapper around the modular pipeline:
+
     inverse_source_em.data.generator_3src.create_3src_datasets
+
+Each dataset contains three point sources with polar coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the corresponding boundary
+fields $E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+Run from the project root:
+    python make_3src_dataset.py
 """
+
 
 import os
 from inverse_source_em.data.generator_3src import create_3src_datasets

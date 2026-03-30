@@ -1,16 +1,33 @@
 """
 Run all classification evaluation modules.
 
-Loads:
-- dataset: data/classification/dataset_classification.npz
-- model:   models/classifier_1_to_5_resnet1d.pt
+This script loads the trained classifier and the classification dataset, then
+executes the full evaluation suite:
 
-Runs:
-- accuracy
-- confusion
-- noise_robustness
-- timing
+    - accuracy
+    - confusion matrix
+    - noise robustness
+    - timing
+
+It returns a unified dictionary containing the status and metrics of each
+evaluation module, along with an overall pass/fail flag.
+
+Expected file structure:
+    data/classification/dataset_classification.npz
+    models/classifier_1_to_5_resnet1d.pt
+
+Returned structure:
+{
+    "overall_status": "passed" | "failed",
+    "results": {
+        "accuracy": {...},
+        "confusion": {...},
+        "noise_robustness": {...},
+        "timing": {...}
+    }
+}
 """
+
 
 import os
 import numpy as np

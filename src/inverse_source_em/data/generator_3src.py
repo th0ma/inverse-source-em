@@ -1,13 +1,27 @@
 """
-Dataset generator for the 3-source regression pipeline.
+Dataset generator for the 3‑source regression pipeline.
 
-This module provides:
-- Unified surrogate-based forward model for 3 sources
-- Feature extraction (Re/Im of E and H)
-- Dataset generation per geometry stage
-- Scaling and saving utilities
+This module implements the full dataset generation workflow for the
+three‑source inverse EM problem. It provides:
 
-The generator follows the same structure as the 1src and 2src pipelines.
+1. A unified surrogate‑based forward model for computing Esurf/Hsurf
+   for three sources.
+
+2. Feature extraction:
+       X = [Re(E), Im(E), Re(H), Im(H)]
+   with total length 4 * num_angles.
+
+3. Stage‑based dataset generation:
+   Each geometry stage imposes different constraints on the relative
+   positions of the three sources (see sampling_3src.py).
+
+4. Scaling and saving utilities:
+   - Train/test split
+   - MinMax normalization for X and y
+   - Saving arrays and scalers per stage
+
+The generator follows the same structure as the 1‑source and 2‑source
+pipelines, but extended to handle the combinatorial geometry of 3 sources.
 """
 
 import os
@@ -35,9 +49,32 @@ from .sampling_3src import (
 
 class ThreeSourceForwardModel:
     """
-    Wrapper around SurrogateWrapper for computing
-    E/H surface fields for 3 sources.
+    Unified surrogate‑based forward model for 3 sources.
+
+    This wrapper provides:
+        - Surrogate evaluation for Esurf/Hsurf
+        - Automatic superposition of fields from 3 sources
+        - Feature extraction into a 4 * num_angles vector
+
+    Parameters
+    ----------
+    path_E : str
+        Path to trained surrogate model for Esurf.
+    path_H : str
+        Path to trained surrogate model for Hsurf.
+    num_angles : int, optional
+        Number of observation angles. Default is 30.
+
+    Attributes
+    ----------
+    theta : ndarray of shape (num_angles,)
+        Observation angles.
+    R : float
+        Physical radius of the domain.
+    sur_wrap : SurrogateWrapper
+        Unified surrogate forward model.
     """
+
     def __init__(self, path_E, path_H, num_angles=30):
         self.num_angles = num_angles
         self.theta = np.linspace(0, 2 * np.pi, num_angles, endpoint=False)
@@ -47,20 +84,27 @@ class ThreeSourceForwardModel:
         self.R = phys.R
 
         # Surrogate forward model
-        sur = SurrogateEM(
-            path_E=path_E,
-            path_H=path_H
-        )
-
+        sur = SurrogateEM(path_E=path_E, path_H=path_H)
         self.sur_wrap = SurrogateWrapper(sur)
 
     # --------------------------------------------------------
 
     def get_features(self, rho1, phi1, rho2, phi2, rho3, phi3):
         """
-        Compute feature vector:
-            [Re(E), Im(E), Re(H), Im(H)]
-        length = 4 * num_angles
+        Compute the feature vector for 3 sources.
+
+        Parameters
+        ----------
+        rho1, rho2, rho3 : float
+            Radial coordinates of the sources.
+        phi1, phi2, phi3 : float
+            Angular coordinates of the sources.
+
+        Returns
+        -------
+        X : ndarray of shape (4 * num_angles,)
+            Concatenated feature vector:
+                [Re(E), Im(E), Re(H), Im(H)]
         """
 
         # Compute fields for each source
@@ -97,9 +141,22 @@ def generate_dataset_for_stage(
     """
     Generate a dataset for a specific geometry stage.
 
-    Returns:
-        X_raw: (N, 4*num_angles)
-        y_raw: (N, 6)
+    Parameters
+    ----------
+    stage : int
+        Geometry stage index (1–8).
+    num_samples : int
+        Number of samples to generate.
+    forward_model : ThreeSourceForwardModel
+        Unified surrogate forward model.
+
+    Returns
+    -------
+    X_raw : ndarray of shape (N, 4*num_angles)
+        Raw feature vectors.
+    y_raw : ndarray of shape (N, 6)
+        Cartesian coordinates:
+            [x1, y1, x2, y2, x3, y3]
     """
 
     X_list = []
@@ -144,6 +201,19 @@ def generate_dataset_for_stage(
 def save_stage_data(out_dir, stage, X_train, X_test, y_train, y_test, scaler_X, scaler_y):
     """
     Save dataset and scalers for a specific geometry stage.
+
+    Parameters
+    ----------
+    out_dir : str
+        Output directory.
+    stage : int
+        Geometry stage index.
+    X_train, X_test : ndarray
+        Scaled feature matrices.
+    y_train, y_test : ndarray
+        Scaled target matrices.
+    scaler_X, scaler_y : MinMaxScaler
+        Fitted scalers for X and y.
     """
 
     prefix = os.path.join(out_dir, f"stage_{stage}")
@@ -177,7 +247,26 @@ def create_3src_datasets(
     num_angles=30
 ):
     """
-    Create datasets for all geometry stages of the 3-source pipeline.
+    Create datasets for all geometry stages of the 3‑source pipeline.
+
+    Parameters
+    ----------
+    out_dir : str
+        Output directory.
+    path_E, path_H : str
+        Paths to trained surrogate models.
+    stages : iterable of int
+        Geometry stages to generate.
+    num_samples_per_stage : int
+        Number of samples per stage.
+    num_angles : int
+        Number of observation angles.
+
+    Notes
+    -----
+    - Each stage is saved independently.
+    - MinMaxScaler is fitted on train only.
+    - The forward model is reused across all stages.
     """
 
     os.makedirs(out_dir, exist_ok=True)

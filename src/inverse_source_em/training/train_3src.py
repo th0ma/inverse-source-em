@@ -1,12 +1,33 @@
 """
 Training pipeline for the 3‑source regression model.
 
-This module implements:
-- curriculum training over stages 1..8
-- noise consistency regularization
-- cosine annealing scheduler
-- early stopping
-- checkpointing in models/regression_3src/
+This module implements the full curriculum‑based training strategy used
+for the three‑source inverse EM regression task. The pipeline includes:
+
+1. Curriculum training over geometry stages 1..8
+   Each stage corresponds to a different geometric configuration of the
+   three sources. The model is trained sequentially across stages, with
+   later stages initialized from the best checkpoint of the previous one.
+
+2. Noise‑consistency regularization
+   During training, 15% of the angular measurements are perturbed with
+   small Gaussian noise. The model is encouraged to produce consistent
+   predictions between clean and noisy inputs, improving robustness.
+
+3. Cosine annealing learning‑rate scheduler
+   Uses CosineAnnealingWarmRestarts to gradually reduce the learning rate
+   while allowing periodic warm restarts.
+
+4. Early stopping
+   Training for each stage stops when validation loss does not improve
+   for a specified patience window.
+
+5. Checkpointing
+   Best model for each stage is saved under:
+       models/regression_3src/best_model_stage_{k}.pt
+
+This module does NOT define the dataset or the model architecture; it
+only orchestrates the training process.
 """
 
 import os
@@ -34,8 +55,26 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 def load_model_for_stage(input_dim: int, stage_index: int, ckpt_dir: str):
     """
-    Stage 1 → fresh model
-    Stage k>1 → load best_model_stage_{k-1}.pt
+    Load or initialize the model for a given curriculum stage.
+
+    Parameters
+    ----------
+    input_dim : int
+        Dimensionality of the input feature vector.
+    stage_index : int
+        Current stage index (1..8).
+    ckpt_dir : str
+        Directory containing stage checkpoints.
+
+    Returns
+    -------
+    model : nn.Module
+        Initialized or stage‑pretrained model.
+
+    Notes
+    -----
+    - Stage 1 always starts from a fresh model.
+    - Stage k>1 loads the best checkpoint from stage k‑1 if available.
     """
     model = ThreeSourceMultiHeadBig(input_dim).to(DEVICE)
 
@@ -69,7 +108,42 @@ def train_stage(
     block: int = 100,
 ):
     """
-    Train the model for a single geometry stage.
+    Train the model for a single curriculum stage.
+
+    Parameters
+    ----------
+    stage_index : int
+        Current stage index (1..8).
+    model : nn.Module
+        Three‑source regression model.
+    train_loader : DataLoader
+        Training dataset loader.
+    test_loader : DataLoader
+        Validation dataset loader.
+    scaler_y : sklearn-like scaler
+        Used to inverse-transform target coordinates.
+    ckpt_dir : str
+        Directory for saving checkpoints.
+    epochs : int, optional
+        Maximum number of epochs for this stage.
+    lr : float, optional
+        Learning rate for Adam optimizer.
+    patience : int, optional
+        Early stopping patience.
+    block : int, optional
+        Logging interval.
+
+    Returns
+    -------
+    model : nn.Module
+        Model loaded with the best checkpoint for this stage.
+
+    Notes
+    -----
+    - Includes noise‑consistency regularization: 15% of angles are
+      perturbed with small Gaussian noise.
+    - Uses CosineAnnealingWarmRestarts for LR scheduling.
+    - Best model is saved as best_model_stage_{stage}.pt.
     """
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
@@ -233,6 +307,26 @@ def train_full_curriculum(
 ):
     """
     Train the 3‑source model across all geometry stages.
+
+    Parameters
+    ----------
+    data_dir : str
+        Directory containing the stage‑structured datasets.
+    ckpt_dir : str
+        Directory where checkpoints will be saved.
+    stages : iterable of int, optional
+        Sequence of stages to train (default: 1..8).
+
+    Notes
+    -----
+    - Each stage loads its own dataset via load_3src_datasets().
+    - The model for stage k>1 is initialized from the best checkpoint of
+      stage k‑1, enabling curriculum learning.
+    - After all stages complete, the directory contains:
+          best_model_stage_1.pt
+          best_model_stage_2.pt
+          ...
+          best_model_stage_8.pt
     """
 
     os.makedirs(ckpt_dir, exist_ok=True)

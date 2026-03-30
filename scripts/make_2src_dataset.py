@@ -4,12 +4,18 @@
 """
 make_2src_dataset.py
 
-Top-level script to generate the two-source dataset using the
-modular pipeline in inverse_source_em.data.dataset_2src.
+Top‑level script for generating the two‑source dataset using the modular
+pipeline in `inverse_source_em.data.dataset_2src`.
 
-Run from project root:
+This script constructs a dataset of two point sources, each defined by
+polar coordinates $\left(\rho_1,\\,\phi_1\right)$ and $\left(\rho_2,\\,\phi_2\right)$,
+and strengths $I_1$, $I_2$. For each sample, the full boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ are computed using the canonical surrogate model.
+
+Run from the project root:
     python make_2src_dataset.py
 """
+
 
 import numpy as np
 import os

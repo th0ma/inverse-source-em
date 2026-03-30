@@ -1,16 +1,23 @@
 """
 Sampling utilities for the source-count classification dataset.
 
-This module provides:
-    - sample_single_source
-    - sample_sources
+This module provides helper functions for generating random source
+configurations inside a circular domain of radius R. These sampled
+sources are used by the classification dataset generator to create
+multi-source boundary field examples.
 
-These functions generate random source configurations inside a disk
-of radius R, with optional intensity ranges.
+Two sampling routines are provided:
 
-Public API:
-    sample_single_source(...)
-    sample_sources(...)
+- ``sample_single_source(R, rng, I_range)``  
+  Samples a single source uniformly in the disk, with optional intensity range.
+
+- ``sample_sources(S, R, rng, I_range)``  
+  Samples S independent sources and returns them as a list of dictionaries.
+
+Public API
+----------
+sample_single_source(...)
+sample_sources(...)
 """
 
 import numpy as np
@@ -18,25 +25,35 @@ import numpy as np
 
 def sample_single_source(R, rng, I_range=(1.0, 1.0)):
     """
-    Sample a single source inside a disk of radius R.
+    Sample a single source uniformly inside a disk of radius R.
+
+    The sampling distribution is:
+        rho = R * sqrt(U),   U ~ Uniform(0, 1)
+        phi ~ Uniform(0, 2π)
+    which ensures uniform density over the disk area.
 
     Parameters
     ----------
     R : float
-        Physical radius.
+        Physical radius of the domain.
     rng : np.random.Generator
         Random number generator.
-    I_range : tuple (I_min, I_max)
-        Range for source intensity.
+    I_range : tuple (I_min, I_max), optional
+        Range for source intensity. Default is (1.0, 1.0), i.e. fixed intensity.
 
     Returns
     -------
     rho : float
-        Radial coordinate (0 ≤ rho ≤ R).
+        Radial coordinate of the sampled source.
     phi : float
-        Angular coordinate in [0, 2π).
+        Angular coordinate in radians.
     I : float
-        Source intensity.
+        Source intensity sampled from the given range.
+
+    Notes
+    -----
+    - The returned rho satisfies 0 ≤ rho ≤ R.
+    - The sampling is rotationally symmetric and area-uniform.
     """
     rho = R * np.sqrt(rng.uniform())
     phi = 2 * np.pi * rng.uniform()
@@ -46,23 +63,29 @@ def sample_single_source(R, rng, I_range=(1.0, 1.0)):
 
 def sample_sources(S, R, rng, I_range=(1.0, 1.0)):
     """
-    Sample S independent sources.
+    Sample S independent sources inside a disk of radius R.
 
     Parameters
     ----------
     S : int
-        Number of sources.
+        Number of sources to sample.
     R : float
-        Physical radius.
+        Physical radius of the domain.
     rng : np.random.Generator
         Random number generator.
-    I_range : tuple
+    I_range : tuple (I_min, I_max), optional
         Range for source intensity.
 
     Returns
     -------
     sources : list of dict
-        Each dict has keys: {"rho", "phi", "I"}.
+        A list of S dictionaries, each with keys:
+            {"rho", "phi", "I"}
+
+    Notes
+    -----
+    - Each source is sampled independently using ``sample_single_source``.
+    - Intensities may be fixed or variable depending on I_range.
     """
     sources = []
     for _ in range(S):

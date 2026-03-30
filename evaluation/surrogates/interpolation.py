@@ -1,12 +1,15 @@
 """
-Interpolation Error Evaluation for Surrogate Models
+Interpolation Error Evaluation for Surrogate Models.
 
-This module evaluates the surrogate's accuracy across the full 3D input space:
+This module evaluates the surrogate model's interpolation accuracy across the
+full 3D input space:
+
     ρ_s ∈ [0.1R, 0.9R]
     φ_s ∈ [0, 2π]
     θ   ∈ [0, 2π]
 
-We sample N random points and compute:
+We sample N random points in this domain and compute:
+
     ΔE = E_phys - E_sur
     ΔH = H_phys - H_sur
 
@@ -15,26 +18,37 @@ Relative errors:
     ERR_H = |ΔH| / (|H_phys| + 1e-12)
 
 Returned metrics:
-- mean / median / max relative error
-- 95th percentile error
-- correlation of error with θ (optional)
+    - mean relative error
+    - median relative error
+    - max relative error
+    - 95th percentile relative error
 
-Standardized output:
+Notes:
+    - SurrogateWrapper is ignored because it is an interface layer.
+    - PhysicsTM is evaluated point‑by‑point (non‑vectorized), while the
+      surrogate is evaluated in vectorized form.
+    - This module evaluates numerical accuracy, not API behavior.
+    - Sampling is random but reproducible if the caller sets NumPy seeds.
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "interpolation",
     "status": "passed" | "failed",
     "metrics": {
-        "E_rel_mean": ...,
+        "E_rel_mean":   ...,
         "E_rel_median": ...,
-        "E_rel_max": ...,
-        "E_rel_p95": ...,
-        "H_rel_mean": ...,
+        "E_rel_max":    ...,
+        "E_rel_p95":    ...,
+        "H_rel_mean":   ...,
         "H_rel_median": ...,
-        "H_rel_max": ...,
-        "H_rel_p95": ...
+        "H_rel_max":    ...,
+        "H_rel_p95":    ...
     }
 }
 """
+
 
 import numpy as np
 

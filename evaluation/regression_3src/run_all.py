@@ -1,3 +1,29 @@
+"""
+run_all.py — Unified evaluation suite for 3‑source regression.
+
+This script runs the complete evaluation pipeline for the 3‑source regression
+model, including:
+
+1. accuracy evaluation  
+2. detailed error tables  
+3. noise‑robustness sweep  
+4. timing benchmarks  
+
+Each evaluation sample contains three point sources with polar coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+The script prints a clean summary of all metrics and returns a dictionary
+containing the outputs of all evaluation modules.
+
+Run as a standalone script:
+    python run_all.py
+"""
+
+
 # ============================================================
 # run_all.py — Run full evaluation suite for 3-source regression
 # ============================================================

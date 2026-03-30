@@ -1,10 +1,14 @@
 """
-Confusion Matrix Evaluation for Source-Count Classification Model
+Confusion Matrix Evaluation for Source-Count Classification Model.
 
-This module computes:
-- raw confusion matrix
-- normalized confusion matrix (per true class)
-- precision, recall, F1 per class
+This module evaluates class-wise performance of a trained classifier for
+source-count prediction (S ∈ {1,2,3,4,5}). It computes:
+
+    - raw confusion matrix
+    - normalized confusion matrix (row-normalized per true class)
+    - precision per class
+    - recall per class
+    - F1 score per class
 
 Returned structure:
 {
@@ -18,7 +22,13 @@ Returned structure:
         "f1": [...]
     }
 }
+
+Notes:
+    - Inputs X_test and y_test must be NumPy arrays.
+    - The model must output logits of shape (B, num_classes).
+    - Status is 'failed' only if NaN/Inf values appear in the metrics.
 """
+
 
 import numpy as np
 import torch

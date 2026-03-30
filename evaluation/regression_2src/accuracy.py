@@ -1,13 +1,20 @@
 """
-Accuracy evaluation for 2‑source regression model.
+Accuracy evaluation for the 2‑source regression model.
 
-Handles permutation invariance:
-For each sample, evaluates both assignments:
-    (predA→trueA, predB→trueB)
-    (predA→trueB, predB→trueA)
-and keeps the one with smaller total error.
+This module handles permutation invariance by evaluating both possible
+assignments between predicted and true sources:
 
-Returns:
+1. $\left(\text{predA}\rightarrow\text{trueA},\\,\text{predB}\rightarrow\text{trueB}\right)$
+2. $\left(\text{predA}\rightarrow\text{trueB},\\,\text{predB}\rightarrow\text{trueA}\right)$
+
+For each sample, the assignment with the smaller total distance error is kept.
+Distances are computed in the 2D output space:
+$$
+d = \left\lVert \left(x_{\mathrm{pred}},\\,y_{\mathrm{pred}}\right)
+      - \left(x_{\mathrm{true}},\\,y_{\mathrm{true}}\right) \right\rVert_2
+$$
+
+Returned structure:
 {
     "module": "accuracy",
     "status": "passed" | "failed",
@@ -21,6 +28,7 @@ Returns:
     }
 }
 """
+
 
 import numpy as np
 import torch

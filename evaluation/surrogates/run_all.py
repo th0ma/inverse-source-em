@@ -1,21 +1,29 @@
 """
-Unified Evaluation Runner for Surrogate Models
+Unified Evaluation Runner for Surrogate Models.
 
-This script loads:
-- PhysicsTM (analytical model)
-- SurrogateEM (neural surrogate)
-- SurrogateWrapper (API adapter)
+This script loads the three forward models:
+    - PhysicsTM (analytical reference model)
+    - SurrogateEM (neural surrogate for Esurf and Hsurf)
+    - SurrogateWrapper (API‑compatible adapter around SurrogateEM)
 
-and runs all evaluation modules in this package.
+and executes all evaluation modules in this package.
 
-Each module returns:
-{
-    "module": "<name>",
-    "status": "passed" | "failed",
-    "metrics": {...}
-}
+Each evaluation module returns a standardized dictionary:
 
-The runner aggregates all results into a single dictionary:
+    {
+        "module": "<name>",
+        "status": "passed" | "failed",
+        "metrics": {...}
+    }
+
+The unified runner:
+    - loads all models,
+    - executes each evaluation module in sequence,
+    - collects their outputs,
+    - and aggregates everything into a single result dictionary.
+
+The final output has the form:
+
 {
     "overall_status": "passed" | "failed",
     "results": {
@@ -30,7 +38,15 @@ The runner aggregates all results into a single dictionary:
         "timing": {...}
     }
 }
+
+Notes:
+    - overall_status is "failed" if any module reports failure.
+    - SurrogateEM weights are loaded from the directory specified by
+      `models_path` (default: "models").
+    - This runner is the recommended entry point for full surrogate
+      evaluation and regression testing.
 """
+
 
 import os
 import numpy as np

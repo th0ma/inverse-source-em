@@ -1,10 +1,10 @@
 """
-Broadcasting Evaluation for Surrogate Models
+Broadcasting Evaluation for Surrogate Models.
 
 PhysicsTM does NOT support broadcasting over (rho, phi, theta).
 Broadcasting is required only for:
-- SurrogateEM
-- SurrogateWrapper
+    - SurrogateEM
+    - SurrogateWrapper
 
 This module validates that the surrogate models correctly broadcast
 vectorized inputs of equal length:
@@ -14,18 +14,29 @@ vectorized inputs of equal length:
     theta: shape (N,)
 
 Expected output:
-    Esurf, Hsurf: shape (N,)
+    Esurf(rho, phi_s, theta) → shape (N,)
+    Hsurf(rho, phi_s, theta) → shape (N,)
 
-Returns standardized metrics:
+The evaluation checks that both Esurf and Hsurf return outputs with
+the correct shape when given vectorized inputs.
+
+Notes:
+    - PhysicsTM is excluded because it does not implement broadcasting.
+    - This test checks only API behavior (shapes), not numerical accuracy.
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "broadcasting",
     "status": "passed" | "failed",
     "metrics": {
-        "sur": {...},
+        "sur":  {...},
         "wrap": {...}
     }
 }
 """
+
 
 import numpy as np
 

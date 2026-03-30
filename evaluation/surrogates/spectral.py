@@ -1,16 +1,33 @@
 """
-Spectral Evaluation for Surrogate Models
+Spectral Evaluation for Surrogate Models.
 
-This module compares the Fourier spectra of Esurf(θ) and Hsurf(θ)
-between PhysicsTM (reference) and SurrogateEM.
+This module compares the Fourier spectra of Esurf(θ) and Hsurf(θ) between
+PhysicsTM (reference) and SurrogateEM. The comparison is performed on a
+fixed θ‑slice:
 
-We compute:
-- L2 norm of FFT difference
-- relative spectral error
-- spectral centroid difference
-- high-frequency energy ratio
+    θ ∈ [0, 2π), sampled at 1024 points
+    ρ_s = 0.6R
+    φ_s = 1.0
 
-Returned metrics:
+For each field we compute:
+
+    - L2 norm of FFT difference
+    - relative spectral error
+    - spectral centroid difference (frequency‑weighted average)
+    - high‑frequency energy ratio (surrogate vs physics)
+
+These metrics quantify how well the surrogate reproduces the spectral
+content of the true fields, including modal amplitudes and distribution
+of energy across frequencies.
+
+Notes:
+    - SurrogateWrapper is ignored because it is an interface layer.
+    - This test evaluates spectral fidelity, not pointwise accuracy.
+    - FFTs are complex‑valued; all metrics use magnitudes |·|.
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "spectral",
     "status": "passed" | "failed",
@@ -26,6 +43,7 @@ Returned metrics:
     }
 }
 """
+
 
 import numpy as np
 

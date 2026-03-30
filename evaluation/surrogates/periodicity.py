@@ -1,27 +1,41 @@
 """
-Periodicity Evaluation for Surrogate Models
+Periodicity Evaluation for Surrogate Models.
 
-A physically correct TM forward model must satisfy 2π-periodicity:
+A physically correct TM forward model must satisfy 2π‑periodicity with respect
+to the source azimuth φ_s:
 
-    Esurf(rho, phi_s, θ) = Esurf(rho, phi_s + 2π, θ)
-    Hsurf(rho, phi_s, θ) = Hsurf(rho, phi_s + 2π, θ)
+    Esurf(rho, φ_s, θ) = Esurf(rho, φ_s + 2π, θ)
+    Hsurf(rho, φ_s, θ) = Hsurf(rho, φ_s + 2π, θ)
 
-This module computes the maximum absolute periodicity error for:
-- PhysicsTM
-- SurrogateEM
-- SurrogateWrapper
+This module evaluates whether the following models satisfy this periodicity:
+    - PhysicsTM
+    - SurrogateEM
+    - SurrogateWrapper
 
-Returns standardized metrics:
+For each model we compute:
+    - E_abs: max absolute periodicity error for Esurf
+    - H_abs: max absolute periodicity error for Hsurf
+
+Notes:
+    - Periodicity is tested only with respect to φ_s, not θ.
+    - This test checks physical consistency, not numerical accuracy.
+    - Evaluation is performed over θ ∈ [0, 2π) with fixed resolution
+      (num_angles = 300).
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "periodicity",
     "status": "passed" | "failed",
     "metrics": {
-        "phys": {...},
-        "sur": {...},
-        "wrap": {...}
+        "phys": {"E_abs": ..., "H_abs": ..., "model_passed": ...},
+        "sur":  {"E_abs": ..., "H_abs": ..., "model_passed": ...},
+        "wrap": {"E_abs": ..., "H_abs": ..., "model_passed": ...}
     }
 }
 """
+
 
 import numpy as np
 

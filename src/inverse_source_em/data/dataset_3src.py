@@ -1,11 +1,27 @@
 """
-PyTorch Dataset class for the 3‑source regression pipeline.
+PyTorch Dataset class and utilities for the 3‑source regression pipeline.
 
 This module provides:
-- Loading of X/y arrays for a given geometry stage
-- Loading of MinMax scalers
-- Optional inverse-transform utilities
-- A clean PyTorch Dataset class with the same API as 1src and 2src
+
+1. Loading of stage‑based arrays:
+       X_train, X_test, y_train, y_test
+   for any geometry stage (stage_1, stage_2, ...).
+
+2. Loading of MinMaxScaler objects for X and y.
+
+3. A clean PyTorch Dataset class (ThreeSourceDataset) with the same API
+   as the 1‑source and 2‑source datasets.
+
+4. Convenience loader that returns:
+       train_ds, test_ds, scaler_X, scaler_y
+
+5. Optional inverse‑transform utilities for converting scaled predictions
+   back to physical (normalized Cartesian) coordinates.
+
+The dataset format follows the unified regression convention:
+    - X : (N, F) feature matrix
+    - y : (N, 6) normalized Cartesian labels
+          [x1/R, y1/R, x2/R, y2/R, x3/R, y3/R]
 """
 
 import os
@@ -22,8 +38,23 @@ from torch.utils.data import Dataset
 def load_stage_arrays(data_dir, stage):
     """
     Load X_train, X_test, y_train, y_test for a given stage.
-    """
 
+    Parameters
+    ----------
+    data_dir : str
+        Directory containing the stage files.
+    stage : int or str
+        Stage index (e.g., 1, 2, 3).
+
+    Returns
+    -------
+    X_train, X_test, y_train, y_test : ndarray
+        Arrays loaded from:
+            stage_{stage}_X_train.npy
+            stage_{stage}_X_test.npy
+            stage_{stage}_y_train.npy
+            stage_{stage}_y_test.npy
+    """
     prefix = os.path.join(data_dir, f"stage_{stage}")
 
     X_train = np.load(prefix + "_X_train.npy")
@@ -37,8 +68,21 @@ def load_stage_arrays(data_dir, stage):
 def load_stage_scalers(data_dir, stage):
     """
     Load MinMaxScaler objects for X and y.
-    """
 
+    Parameters
+    ----------
+    data_dir : str
+        Directory containing the scaler files.
+    stage : int or str
+        Stage index.
+
+    Returns
+    -------
+    scaler_X, scaler_y : MinMaxScaler
+        Fitted scalers loaded from:
+            stage_{stage}_scaler_X.pkl
+            stage_{stage}_scaler_y.pkl
+    """
     prefix = os.path.join(data_dir, f"stage_{stage}")
 
     with open(prefix + "_scaler_X.pkl", "rb") as f:
@@ -56,13 +100,24 @@ def load_stage_scalers(data_dir, stage):
 
 class ThreeSourceDataset(Dataset):
     """
-    PyTorch Dataset for 3-source regression.
+    PyTorch Dataset for 3‑source regression.
 
-    Parameters:
-        X : numpy array of shape (N, F)
-        y : numpy array of shape (N, 6)
-        device : torch device (optional)
-        dtype : torch dtype (optional)
+    Parameters
+    ----------
+    X : ndarray of shape (N, F)
+        Feature matrix.
+    y : ndarray of shape (N, 6)
+        Normalized Cartesian labels:
+            [x1/R, y1/R, x2/R, y2/R, x3/R, y3/R]
+    device : torch.device or str, optional
+        Device to place tensors on ("cpu" or "cuda").
+    dtype : torch.dtype, optional
+        Tensor dtype (default: torch.float32).
+
+    Notes
+    -----
+    - X and y are converted to tensors once for efficiency.
+    - Device placement is optional and handled internally.
     """
 
     def __init__(self, X, y, device=None, dtype=torch.float32):
@@ -74,9 +129,22 @@ class ThreeSourceDataset(Dataset):
             self.y = self.y.to(device)
 
     def __len__(self):
+        """Return the number of samples."""
         return self.X.shape[0]
 
     def __getitem__(self, idx):
+        """
+        Retrieve a single sample.
+
+        Parameters
+        ----------
+        idx : int
+            Sample index.
+
+        Returns
+        -------
+        (X_i, y_i) : tuple of torch.Tensor
+        """
         return self.X[idx], self.y[idx]
 
 
@@ -91,12 +159,26 @@ def load_3src_datasets(
     dtype=torch.float32
 ):
     """
-    Load train/test datasets + scalers for a given stage.
+    Load train/test datasets and scalers for a given stage.
 
-    Returns:
-        train_ds, test_ds, scaler_X, scaler_y
+    Parameters
+    ----------
+    data_dir : str
+        Directory containing stage files.
+    stage : int or str
+        Stage index.
+    device : torch.device or str, optional
+        Device for returned tensors.
+    dtype : torch.dtype, optional
+        Tensor dtype.
+
+    Returns
+    -------
+    train_ds : ThreeSourceDataset
+    test_ds : ThreeSourceDataset
+    scaler_X : MinMaxScaler
+    scaler_y : MinMaxScaler
     """
-
     X_train, X_test, y_train, y_test = load_stage_arrays(data_dir, stage)
     scaler_X, scaler_y = load_stage_scalers(data_dir, stage)
 
@@ -112,9 +194,26 @@ def load_3src_datasets(
 
 def inverse_transform_targets(y_scaled, scaler_y):
     """
-    Inverse-transform a batch of scaled targets (numpy or torch).
-    """
+    Inverse-transform a batch of scaled targets.
 
+    Parameters
+    ----------
+    y_scaled : ndarray or torch.Tensor
+        Scaled target values.
+    scaler_y : MinMaxScaler
+        Fitted scaler for target space.
+
+    Returns
+    -------
+    y_inv : ndarray
+        Inverse-transformed targets in normalized Cartesian coordinates.
+
+    Notes
+    -----
+    - If y_scaled is a torch.Tensor, it is converted to NumPy first.
+    - This utility is useful for converting model predictions back to
+      interpretable physical coordinates.
+    """
     if isinstance(y_scaled, torch.Tensor):
         y_np = y_scaled.detach().cpu().numpy()
     else:

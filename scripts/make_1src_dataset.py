@@ -5,14 +5,18 @@
 Generate dataset_1src.npz for Regression Problem I (single-source localization).
 
 This script:
-- loads the canonical surrogate models
-- generates N samples using the surrogate forward model
-- performs 2-pass normalization
-- saves the dataset in data/regression/dataset_1src.npz
+    - loads the canonical surrogate forward models for $E_{\mathrm{surf}}$ and $H_{\mathrm{surf}}$
+    - generates $N$ synthetic single-source samples using the surrogate forward map
+    - applies 2-pass normalization (per-channel scaling using global maxima)
+    - saves the dataset to data/regression_1src/dataset_1src.npz
+
+The regression target is the source location:
+    $\(\rho_s,\\,\phi_s\)$
 
 Run:
     python make_1src_dataset.py
 """
+
 
 import os
 from inverse_source_em.data.generator_1src import build_dataset_1src, save_dataset_1src

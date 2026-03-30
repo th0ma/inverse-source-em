@@ -1,16 +1,29 @@
 """
-Timing Benchmark Evaluation for Surrogate Models
+Timing Benchmark Evaluation for Surrogate Models.
 
 This module compares the execution time of:
-- PhysicsTM
-- SurrogateEM
-- SurrogateWrapper
+    - PhysicsTM
+    - SurrogateEM
+    - SurrogateWrapper
 
-We measure:
-- average runtime per call (ms)
-- speedup factors relative to PhysicsTM
+The benchmark measures:
+    - average runtime per forward call (ms)
+    - speedup factors relative to PhysicsTM
 
-Returned metrics:
+The test evaluates Esurf(rho_s, phi_s, theta) repeatedly at a single point.
+This provides a micro‑benchmark of per‑call latency, not a throughput or
+batch‑processing benchmark. SurrogateWrapper is included because it introduces
+a small interface overhead relative to SurrogateEM.
+
+Notes:
+    - Only Esurf is benchmarked; Hsurf has similar cost and does not change
+      relative speedup factors.
+    - Benchmarking is performed with N repeated calls (default: 2000).
+    - This test measures performance, not numerical accuracy.
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "timing",
     "status": "passed" | "failed",
@@ -23,6 +36,7 @@ Returned metrics:
     }
 }
 """
+
 
 import numpy as np
 import time

@@ -3,11 +3,31 @@ loss_2src.py
 
 Structured loss for the two-source inverse EM regression task.
 
-Includes:
-    - TailWeightScheduler (dynamic weighting based on p99)
-    - angle_loss (2D angular error)
-    - area_constraint (parallelogram area consistency)
-    - structured_loss (combined loss + rich logging)
+This module implements a composite loss function tailored for the
+two-source localization problem. It includes:
+
+1. TailWeightScheduler
+   Dynamically adjusts the weight of a loss term based on its p99
+   (99th percentile) error. This helps stabilize training by increasing
+   emphasis on tail errors when they exceed a target threshold.
+
+2. angle_loss
+   Computes the angular difference between predicted and true 2D vectors.
+
+3. area_constraint
+   Encourages geometric consistency by matching the parallelogram area
+   spanned by the predicted and true source vectors.
+
+4. structured_loss
+   Combines:
+       - distance errors for source A and B
+       - angular errors for source A and B
+       - area constraint
+       - dynamic tail-weight scheduling
+       - full logging of p99 metrics and weights
+
+The output is a dictionary of weighted loss components and diagnostics,
+allowing fine-grained monitoring during training.
 """
 
 import torch
@@ -16,7 +36,27 @@ import torch
 class TailWeightScheduler:
     """
     Dynamically adjusts the weight of a loss term based on its p99 value.
-    If p99 exceeds the target threshold, the weight increases gradually.
+
+    If the 99th percentile error exceeds a target threshold, the weight
+    increases gradually according to a linear schedule:
+
+        w = min_w + (p99 - target_p99) / delta
+
+    clipped to [min_w, max_w].
+
+    Parameters
+    ----------
+    config : dict
+        Must contain:
+            - "target_p99" : float
+            - "min_w"      : float
+            - "max_w"      : float
+            - "delta"      : float
+
+    Notes
+    -----
+    - This scheduler is typically used for distance and angle terms.
+    - It helps prevent the model from ignoring difficult tail cases.
     """
 
     def __init__(self, config):
@@ -26,6 +66,19 @@ class TailWeightScheduler:
         self.delta = config["delta"]
 
     def __call__(self, current_p99: float) -> float:
+        """
+        Compute the dynamic weight based on the current p99 value.
+
+        Parameters
+        ----------
+        current_p99 : float
+            The observed 99th percentile error for a loss component.
+
+        Returns
+        -------
+        float
+            Updated weight in [min_w, max_w].
+        """
         excess = max(0.0, current_p99 - self.target_p99)
         steps = excess / self.delta
         return min(self.min_w + steps, self.max_w)
@@ -33,17 +86,20 @@ class TailWeightScheduler:
 
 def angle_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """
-    Computes the angular difference between two 2D vectors.
-    Uses cosine similarity with numerical stability.
+    Compute the angular difference between two 2D vectors.
+
+    Uses cosine similarity with numerical stability, then applies arccos.
 
     Parameters
     ----------
-    pred : (N, 2)
-    target : (N, 2)
+    pred : torch.Tensor of shape (N, 2)
+        Predicted 2D vectors.
+    target : torch.Tensor of shape (N, 2)
+        Ground-truth 2D vectors.
 
     Returns
     -------
-    angle : (N,)
+    torch.Tensor of shape (N,)
         Angular error in radians.
     """
     dot = torch.sum(pred * target, dim=1)
@@ -58,19 +114,26 @@ def angle_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 
 def area_constraint(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """
-    Encourages the predicted pair of vectors to preserve the
+    Enforce geometric consistency via parallelogram area preservation.
+
+    For two 2D vectors (v1, v2), the area of the parallelogram they span is:
+
+        area = |x1*y2 - y1*x2|
+
+    This term encourages the predicted pair of vectors to preserve the
     relative area spanned by the true pair.
 
     Parameters
     ----------
-    preds : (N, 4)
-        [x1, y1, x2, y2] predicted
-    targets : (N, 4)
-        [x1, y1, x2, y2] true
+    preds : torch.Tensor of shape (N, 4)
+        Predicted coordinates [x1, y1, x2, y2].
+    targets : torch.Tensor of shape (N, 4)
+        Ground-truth coordinates [x1, y1, x2, y2].
 
     Returns
     -------
-    scalar tensor
+    torch.Tensor (scalar)
+        Mean absolute area difference.
     """
     pred_area = torch.abs(preds[:, 0] * preds[:, 3] - preds[:, 1] * preds[:, 2])
     target_area = torch.abs(targets[:, 0] * targets[:, 3] - targets[:, 1] * targets[:, 2])
@@ -87,7 +150,9 @@ def structured_loss(
     sched_angleB: TailWeightScheduler | None = None,
 ):
     """
-    Computes a structured loss combining:
+    Compute the full structured loss for the two-source regression task.
+
+    The loss combines:
         - distance errors for source A and B
         - angular errors for source A and B
         - area constraint
@@ -96,14 +161,39 @@ def structured_loss(
 
     Parameters
     ----------
-    preds : (N, 4)
-    targets : (N, 4)
+    preds : torch.Tensor of shape (N, 4)
+        Predicted normalized Cartesian coordinates:
+            [x1/R, y1/R, x2/R, y2/R]
+    targets : torch.Tensor of shape (N, 4)
+        Ground-truth normalized Cartesian coordinates.
     config : dict
         Must contain:
-            LAMBDA_AREA, LAMBDA_DISTA, LAMBDA_DISTB,
-            LAMBDA_ANGLEA, LAMBDA_ANGLEB
-    """
+            "LAMBDA_AREA", "LAMBDA_DISTA", "LAMBDA_DISTB",
+            "LAMBDA_ANGLEA", "LAMBDA_ANGLEB"
+    sched_distA, sched_distB : TailWeightScheduler or None
+        Optional dynamic schedulers for distance terms.
+    sched_angleA, sched_angleB : TailWeightScheduler or None
+        Optional dynamic schedulers for angle terms.
 
+    Returns
+    -------
+    dict
+        Dictionary containing:
+            - weighted loss components
+            - dynamic weights
+            - p99 diagnostics
+
+        Example keys:
+            "area", "distA", "distB", "angleA", "angleB",
+            "w_distA", "w_distB", "w_angleA", "w_angleB",
+            "p99_distA", "p99_distB", "p99_angleA", "p99_angleB"
+
+    Notes
+    -----
+    - This function does NOT sum the losses; it returns a dictionary.
+      The training loop is expected to sum the components as needed.
+    - p99 metrics provide robustness diagnostics for tail performance.
+    """
     # Distances
     distA = torch.norm(preds[:, 0:2] - targets[:, 0:2], dim=1)
     distB = torch.norm(preds[:, 2:4] - targets[:, 2:4], dim=1)

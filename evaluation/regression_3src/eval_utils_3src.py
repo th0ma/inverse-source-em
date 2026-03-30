@@ -1,3 +1,59 @@
+"""
+eval_utils_3src.py — Shared utilities for 3‑source regression evaluation.
+
+This module provides the common functionality required by all evaluation
+components of the 3‑source regression pipeline. Each sample contains three
+point sources with polar coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+The utilities include:
+
+1. **Model + scaler loading**  
+   Loads the trained 3‑source regression model and the corresponding
+   input/output scalers.
+
+2. **Surrogate forward model**  
+   Wraps the canonical electromagnetic surrogate to compute boundary fields
+   for arbitrary 3‑source configurations.
+
+3. **Canonical ordering**  
+   Ensures a consistent ordering of the three sources by sorting
+   $\left(\rho,\\,\phi\right)$ pairs.
+
+4. **Angular difference helper**  
+   Computes wrapped angular differences:
+   $$
+   \Delta\phi = \left\lvert \left( \phi_{\mathrm{pred}} - \phi_{\mathrm{true}}
+   + \pi \right) \bmod 2\pi - \pi \right\rvert
+   $$
+
+5. **Forward model (E + H)**  
+   Computes the total boundary fields from the three sources.
+
+6. **Evaluation dataset generator**  
+   Generates clean evaluation datasets for geometry levels 1–8, enforcing
+   minimum radial and angular separations.
+
+7. **Forward‑pass utilities**  
+   Converts scaled inputs to model predictions and transforms
+   $\left(\rho,\\,\cos\phi,\\,\sin\phi\right)$ into Cartesian coordinates:
+   $$
+   x = \rho \cos\phi, \qquad y = \rho \sin\phi
+   $$
+
+8. **Error metrics**  
+   Provides $R^2$, MAE, and Cartesian distance errors.
+
+This module is imported by all 3‑source evaluation scripts:
+`accuracy.py`, `error_tables.py`, `noise_robustness.py`, `timing.py`,
+and `run_all.py`.
+"""
+
+
 # ============================================================
 # eval_utils_3src.py — Shared utilities for 3-source regression evaluation
 # ============================================================

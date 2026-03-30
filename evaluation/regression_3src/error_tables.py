@@ -1,3 +1,36 @@
+"""
+error_tables.py — 3‑source regression error statistics.
+
+This module computes detailed Cartesian error statistics for the 3‑source
+regression model on a clean (noise‑free) evaluation dataset. Each sample
+contains three point sources with polar coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+The model predicts $\rho$, $\cos\phi$, $\sin\phi$ for each source, which are
+converted to Cartesian coordinates:
+$$
+x = \rho \cos\phi, \qquad y = \rho \sin\phi
+$$
+
+For each source (A, B, C), the module computes:
+- mean absolute error (MAE)
+- root‑mean‑square error (RMSE)
+- median error
+
+It also computes the max‑triplet error:
+$$
+e_{\mathrm{max}} = \max\left( e_A,\\,e_B,\\,e_C \right)
+$$
+
+Run as a standalone script:
+    python error_tables.py
+"""
+
+
 # ============================================================
 # error_tables.py — 3-source regression error statistics
 # ============================================================

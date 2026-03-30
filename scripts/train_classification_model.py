@@ -1,15 +1,23 @@
 """
-Train classification model (1–5 sources) using the inverse_source_em package.
+Train a 1–5 source-count classifier using the inverse_source_em package.
 
 This script:
-    - Loads dataset_classification.npz from data/classification/
-    - Builds DataLoaders
-    - Instantiates the ResNet1D classifier
-    - Trains with validation monitoring
-    - Saves the best model to models/classifier_1_to_5_resnet1d.pth
+    - Loads classification_dataset.npz from data/classification/
+    - Builds PyTorch DataLoaders for train/val/test
+    - Instantiates the SourceCountResNet1D classifier
+    - Trains with validation monitoring and early stopping
+    - Saves the best checkpoint to:
+          models/classifier_1_to_5_resnet1d.pth
 
 Usage:
     python train_classification_model.py
+
+Input features:
+    X: (B, 4, num_angles)
+       Channels = [Re(E), Im(E), Re(H), Im(H)]
+
+Output:
+    logits: (B, 5)   # classes S = 1..5
 """
 
 import os

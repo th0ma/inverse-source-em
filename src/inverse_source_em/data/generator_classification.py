@@ -1,18 +1,23 @@
 """
 Forward-model utilities for the source-count classification dataset.
 
-This module provides:
-    - forward_fields: multi-source superposition using SurrogateWrapper
+This module provides the function ``forward_fields`` which computes the
+multi-source boundary fields (Esurf, Hsurf) using the unified surrogate
+forward model (SurrogateWrapper). The fields from all sources are summed
+according to the superposition principle.
 
-Given a list of sources (each with rho, phi, I), the unified surrogate
-forward model is used to compute:
+Given a list of sources, each defined by:
+    {"rho": ..., "phi": ..., "I": ...}
+
+the function computes:
     E_total(theta), H_total(theta)
 
-The output is a feature tensor of shape (4, num_angles):
-    [Re(E), Im(E), Re(H), Im(H)]
+and returns a feature tensor of shape (4, num_angles):
 
-Public API:
-    forward_fields(...)
+    [Re(E_total), Im(E_total), Re(H_total), Im(H_total)]
+
+This feature representation is used as input to the source-count
+classification model.
 """
 
 import numpy as np
@@ -22,20 +27,41 @@ def forward_fields(sources, theta, sur_wrap):
     """
     Compute multi-source Esurf and Hsurf using SurrogateWrapper.
 
+    This function evaluates the surrogate forward model for each source
+    in the list and sums the resulting fields to obtain the total boundary
+    fields. The output is formatted as a 4-channel feature tensor suitable
+    for classification tasks.
+
     Parameters
     ----------
     sources : list of dict
-        Each dict has keys {"rho", "phi", "I"}.
-    theta : ndarray, shape (num_angles,)
-        Observation angles.
+        List of source dictionaries, each with keys:
+            {"rho", "phi", "I"}
+        where:
+            rho : float
+                Radial coordinate of the source.
+            phi : float
+                Angular coordinate of the source.
+            I : float
+                Source strength.
+    theta : ndarray of shape (num_angles,)
+        Observation angles in radians.
     sur_wrap : SurrogateWrapper
-        Unified surrogate forward model.
+        Unified surrogate forward model providing:
+            Esurf(rho, phi, theta)
+            Hsurf(rho, phi, theta)
 
     Returns
     -------
-    feat : ndarray, shape (4, num_angles)
-        Feature tensor:
-            [E_real, E_imag, H_real, H_imag]
+    feat : ndarray of shape (4, num_angles)
+        Feature tensor containing:
+            [Re(E_total), Im(E_total), Re(H_total), Im(H_total)]
+
+    Notes
+    -----
+    - All computations are performed in complex128 for numerical stability.
+    - The final feature tensor is returned as float32 for compact storage.
+    - This function is used by the classification dataset generator.
     """
 
     # Initialize accumulators

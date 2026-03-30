@@ -1,10 +1,12 @@
 """
-Noise Robustness Evaluation for Source-Count Classification Model
+Noise Robustness Evaluation for Source-Count Classification Model.
 
-This module evaluates:
-- accuracy under different noise levels
-- per-class accuracy degradation
-- robustness slope (accuracy drop per unit noise)
+This module evaluates how classification performance degrades under additive
+Gaussian noise. It computes:
+
+    - accuracy at multiple noise levels
+    - per-class accuracy at each noise level
+    - robustness slope (linear fit of accuracy vs. noise level)
 
 Returned structure:
 {
@@ -17,7 +19,14 @@ Returned structure:
         "robustness_slope": ...
     }
 }
+
+Notes:
+    - Noise is scaled by the global standard deviation of X_train.
+    - Inputs X_test, y_test, X_train must be NumPy arrays.
+    - The model must output logits of shape (B, num_classes).
+    - Status is 'failed' only if NaN/Inf values appear in the metrics.
 """
+
 
 import numpy as np
 import torch

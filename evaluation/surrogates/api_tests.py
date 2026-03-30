@@ -1,28 +1,38 @@
 """
-API Consistency Evaluation for Surrogate Models
+API Consistency Evaluation for Surrogate Models.
 
-This module validates that PhysicsTM, SurrogateEM, and SurrogateWrapper
-expose a unified forward API:
+This module checks whether PhysicsTM, SurrogateEM, and SurrogateWrapper
+expose a unified forward API for evaluating both Esurf and Hsurf:
 
     Esurf(rho, phi_s, theta_or_num_angles)
     Hsurf(rho, phi_s, theta_or_num_angles)
 
-The test checks:
-- scalar θ → scalar output
-- array θ → array output of same shape
-- integer num_angles → array of length num_angles
+The evaluation verifies that each model supports:
+    - Scalar θ input  → scalar output
+    - Array θ input   → array output with matching shape
+    - Integer input   → array output of length `num_angles`
 
-Returns standardized metrics:
+Notes:
+    - The test is performed using Esurf(), but the API requirements
+      are identical for Hsurf(), so consistency in Esurf implies
+      consistency in Hsurf as well.
+    - This module checks only API behavior (shapes, types), not
+      numerical accuracy.
+    - The returned dictionary follows the standardized evaluation
+      format used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "api_tests",
     "status": "passed" | "failed",
     "metrics": {
         "phys": {...},
-        "sur": {...},
+        "sur":  {...},
         "wrap": {...}
     }
 }
 """
+
 
 import numpy as np
 

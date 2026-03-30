@@ -1,18 +1,32 @@
 """
 Dataset generation utilities for the source-count classification problem.
 
-This module generates datasets for classifying the number of sources
-(1, 2, 3, 4, 5) inside a circular domain, using the unified surrogate
-forward model (SurrogateWrapper).
+This module generates datasets for classifying the number of active sources
+(S = 1, 2, 3, 4, 5) inside a circular domain. It uses the unified surrogate
+forward model (SurrogateWrapper) to compute boundary fields for randomly
+sampled source configurations.
 
-The dataset consists of:
-    - X: (N, 4, num_angles)   → [Re(E), Im(E), Re(H), Im(H)]
-    - y: (N,)                 → class index (0–4)
-    - theta: observation angles
-    - R: physical radius
+The generated dataset contains:
 
-Public API:
-    generate_classification_dataset(...)
+    X : (N, 4, num_angles)
+        Boundary field channels:
+            [Re(E), Im(E), Re(H), Im(H)]
+
+    y : (N,)
+        Class index in {0, 1, 2, 3, 4}, corresponding to S = 1..5 sources.
+
+    theta : ndarray
+        Observation angles.
+
+    R : float
+        Physical radius of the domain.
+
+The dataset is split into train/val/test subsets and standardized per channel.
+Scalers are saved as joblib files for later use during inference.
+
+Public API
+----------
+generate_classification_dataset(...)
 """
 
 import os
@@ -39,18 +53,21 @@ def _generate_class_samples(S, N, R, theta, sur_wrap, rng):
     N : int
         Number of samples to generate.
     R : float
-        Physical radius.
-    theta : ndarray
-        Observation angles (num_angles,).
+        Physical radius of the domain.
+    theta : ndarray of shape (num_angles,)
+        Observation angles in radians.
     sur_wrap : SurrogateWrapper
-        Unified surrogate forward model.
+        Unified surrogate forward model providing Esurf/Hsurf.
     rng : np.random.Generator
-        Random number generator.
+        Random number generator for reproducibility.
 
     Returns
     -------
-    X : ndarray, shape (N, 4, num_angles)
-    y : ndarray, shape (N,)
+    X : ndarray of shape (N, 4, num_angles)
+        Boundary field channels:
+            [Re(E), Im(E), Re(H), Im(H)]
+    y : ndarray of shape (N,)
+        Class labels (S - 1).
     """
     X_list = []
     y_list = []
@@ -77,29 +94,42 @@ def generate_classification_dataset(
     seed=2025
 ):
     """
-    Generate a full classification dataset (1–5 sources).
+    Generate a full classification dataset for S = 1..5 sources.
+
+    This function:
+    - samples source configurations for each class
+    - computes boundary fields using the surrogate forward model
+    - concatenates and shuffles all samples
+    - splits into train/val/test subsets
+    - standardizes each channel independently
+    - saves the dataset and scalers to disk
 
     Parameters
     ----------
     out_dir : str
-        Directory where dataset and scalers will be saved.
+        Directory where the dataset and scalers will be saved.
     sur_wrap : SurrogateWrapper
         Unified surrogate forward model.
     R : float
-        Physical radius.
-    theta : ndarray
-        Observation angles (num_angles,).
+        Physical radius of the domain.
+    theta : ndarray of shape (num_angles,)
+        Observation angles in radians.
     samples_per_class : list or tuple of length 5
-        Number of samples for classes S=1..5.
-    seed : int
+        Number of samples for classes S = 1..5.
+    seed : int, optional
         RNG seed for reproducibility.
 
     Returns
     -------
     out_file : str
         Path to the saved .npz dataset.
-    """
 
+    Notes
+    -----
+    - The dataset is saved in compressed NPZ format.
+    - Four StandardScaler objects (one per channel) are saved as joblib files.
+    - The output dataset uses float32 for compact storage.
+    """
     os.makedirs(out_dir, exist_ok=True)
     rng = np.random.default_rng(seed)
 

@@ -1,13 +1,20 @@
 """
-generator_2src.py
+Feature construction utilities for the two-source inverse EM problem.
 
-Feature construction for the two-source inverse EM problem.
-Builds the 120-dimensional feature vector using the surrogate forward model.
+This module provides the core routines used to generate training samples
+for the 2‑source localization regression dataset. It includes:
 
-Dependencies:
-    - sampling_2src.py
-    - surrogate.surrogate (SurrogateEM)
-    - surrogate.surrogate_wrapper (SurrogateWrapper)
+1. Loading the surrogate forward model (Esurf, Hsurf)
+2. Constructing the 120‑dimensional feature vector:
+       X = [Re(E), Im(E), Re(H), Im(H)] over all observation angles
+3. Generating a single training example (X, Y), where:
+       Y = [x1/R, y1/R, x2/R, y2/R]
+
+Dependencies
+------------
+- sampling_2src.py
+- surrogate.surrogate (SurrogateEM)
+- surrogate.surrogate_wrapper (SurrogateWrapper)
 """
 
 import numpy as np
@@ -17,7 +24,9 @@ from inverse_source_em.data.sampling_2src import (
 )
 
 from inverse_source_em.surrogate.surrogate import SurrogateEM
+    # Provides Esurf() and Hsurf()
 from inverse_source_em.surrogate.surrogate_wrapper import SurrogateWrapper
+    # PhysicsTM-compatible interface
 
 
 # ------------------------------------------------------------
@@ -25,18 +34,31 @@ from inverse_source_em.surrogate.surrogate_wrapper import SurrogateWrapper
 # ------------------------------------------------------------
 def load_surrogate(path_E, path_H):
     """
-    Load the surrogate forward model (Esurf, Hsurf).
+    Load the surrogate forward model (Esurf, Hsurf) and wrap it in a
+    PhysicsTM-compatible interface.
+
+    Parameters
+    ----------
+    path_E : str
+        Path to the trained surrogate model for Esurf.
+    path_H : str
+        Path to the trained surrogate model for Hsurf.
 
     Returns
     -------
     sur_wrap : SurrogateWrapper
-        Wrapper providing Esurf() and Hsurf() methods.
+        Wrapper providing Esurf() and Hsurf() with broadcasting support.
     R : float
-        Physical radius (cm) extracted from surrogate metadata.
+        Physical radius extracted from surrogate metadata.
+
+    Notes
+    -----
+    - SurrogateEM loads the trained MLPs.
+    - SurrogateWrapper provides the unified API used by all dataset builders.
     """
     sur = SurrogateEM(path_E=path_E, path_H=path_H)
     sur_wrap = SurrogateWrapper(sur)
-    R = sur.R  # physical radius from surrogate metadata
+    R = sur.R
     return sur_wrap, R
 
 
@@ -56,24 +78,30 @@ def build_features_two_sources(
     Parameters
     ----------
     rho1_norm, rho2_norm : float
-        Normalized radii τ = ρ/R in [0,1].
+        Normalized radii τ = ρ/R in [0, 1].
     phi1, phi2 : float
-        Angles in radians.
-    theta : ndarray
-        Observation angles (num_angles,)
+        Angular coordinates of the two sources (radians).
+    theta : ndarray of shape (num_angles,)
+        Observation angles.
     sur_wrap : SurrogateWrapper
-        Provides Esurf() and Hsurf() methods.
+        Unified surrogate forward model.
     R : float
-        Physical radius (cm).
+        Physical radius.
 
     Returns
     -------
     X : ndarray of shape (4 * num_angles,)
-        Concatenation of:
-            [Ere(θ), Eim(θ), Hre(θ), Him(θ)]
+        Concatenated feature vector:
+            [Re(E_tot), Im(E_tot), Re(H_tot), Im(H_tot)]
+
+    Notes
+    -----
+    - The surrogate forward model is evaluated separately for each source.
+    - The fields are summed according to the superposition principle.
+    - The output is flattened into a 1D feature vector.
     """
 
-    # Convert normalized radii to physical units (cm)
+    # Convert normalized radii to physical units
     rho1_phys = rho1_norm * R
     rho2_phys = rho2_norm * R
 
@@ -104,14 +132,30 @@ def build_features_two_sources(
 # ------------------------------------------------------------
 def generate_sample(theta, sur_wrap, R):
     """
-    Generate one training example (X, Y) for the two-source problem.
+    Generate one training example (X, Y) for the two-source inverse EM problem.
+
+    Parameters
+    ----------
+    theta : ndarray of shape (num_angles,)
+        Observation angles.
+    sur_wrap : SurrogateWrapper
+        Unified surrogate forward model.
+    R : float
+        Physical radius.
 
     Returns
     -------
-    X : ndarray, shape (120,)
-    Y : ndarray, shape (4,)
+    X : ndarray of shape (4 * num_angles,)
+        Feature vector containing:
+            [Re(E_tot), Im(E_tot), Re(H_tot), Im(H_tot)]
+    Y : ndarray of shape (4,)
         Normalized Cartesian coordinates:
             [x1/R, y1/R, x2/R, y2/R]
+
+    Notes
+    -----
+    - Source positions are sampled using sample_two_sources().
+    - Labels are normalized Cartesian coordinates for stable training.
     """
 
     # 1. Sample geometry

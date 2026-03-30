@@ -1,17 +1,23 @@
 """
-Error table evaluation for 1‑source regression model.
+Error‑table evaluation for the 1‑source regression model.
 
-Computes full arrays of:
-- xy_abs
-- rho_abs
-- phi_abs
-- I_abs
-- rho_rel
-- I_rel
+This module computes the full error arrays and summary statistics for all
+predicted quantities:
 
-And returns:
-- full arrays (as lists)
-- summary statistics (mean, p50, p90, p99)
+- Cartesian localization error:
+  $\left(x,\\,y\right)$
+
+- Polar absolute errors:
+  $\rho$, $\phi$
+
+- Strength absolute error:
+  $I$
+
+- Relative polar error:
+  $\rho_{\mathrm{rel}} = \dfrac{\rho_{\mathrm{abs}}}{\max\left(\rho_{\mathrm{true}},\,10^{-12}\right)}$
+
+- Relative strength error:
+  $I_{\mathrm{rel}} = \dfrac{I_{\mathrm{abs}}}{\max\left(I_{\mathrm{true}},\,10^{-12}\right)}$
 
 Returned structure:
 {
@@ -37,6 +43,7 @@ Returned structure:
     }
 }
 """
+
 
 import numpy as np
 import torch

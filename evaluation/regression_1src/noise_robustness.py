@@ -1,11 +1,14 @@
 """
-Noise robustness evaluation for 1‑source regression model.
+Noise‑robustness evaluation for the 1‑source regression model.
 
-For each noise level:
-- Adds Gaussian noise to X
-- Computes absolute and relative errors:
-    xy_abs, rho_abs, phi_abs, I_abs, rho_rel, I_rel
-- Computes summary statistics (mean, p50, p90, p99)
+For each noise level $\sigma$, this module:
+- adds Gaussian noise to the input fields $X$
+- computes absolute errors:
+    $\left(x,\\,y\right)$, $\rho$, $\phi$, $I$
+- computes relative errors:
+    $\rho_{\mathrm{rel}} = \dfrac{\rho_{\mathrm{abs}}}{\max\left(\rho_{\mathrm{true}},\,10^{-12}\right)}$,
+    $I_{\mathrm{rel}} = \dfrac{I_{\mathrm{abs}}}{\max\left(I_{\mathrm{true}},\,10^{-12}\right)}$
+- computes summary statistics (mean, p50, p90, p99) for each error type
 
 Returned structure:
 {
@@ -27,6 +30,7 @@ Returned structure:
     }
 }
 """
+
 
 import numpy as np
 import torch

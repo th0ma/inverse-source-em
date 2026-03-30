@@ -1,25 +1,33 @@
 """
-Error Map Evaluation for Surrogate Models
+Error Map Evaluation for Surrogate Models.
 
-This module computes ρ–θ error maps for Esurf and Hsurf, but returns ONLY
-numerical metrics (no plots).
+This module computes ρ–θ error maps for Esurf and Hsurf on a fixed 2D grid,
+but returns only summary numerical metrics (no plots, no full error arrays).
 
-We evaluate the PhysicsTM model and the SurrogateEM model on a 2D grid:
+We evaluate PhysicsTM (reference) and SurrogateEM on the domain:
 
     ρ ∈ [0.1R, 0.9R]
     θ ∈ [0, 2π)
 
-For each point we compute:
+For each grid point we compute absolute and relative errors:
+
     ERR_E = |E_phys - E_sur| / (|E_phys| + 1e-12)
     ERR_H = |H_phys - H_sur| / (|H_phys| + 1e-12)
 
 Returned metrics:
-- max absolute error
-- mean absolute error
-- max relative error
-- mean relative error
+    - max absolute error
+    - mean absolute error
+    - max relative error
+    - mean relative error
 
-Standardized output:
+Notes:
+    - SurrogateWrapper is ignored because it is an interface layer.
+    - This module evaluates numerical accuracy, unlike API-based tests.
+    - Grid resolution is fixed (Nr=80, Nt=200) for reproducibility.
+    - The returned dictionary follows the standardized evaluation format
+      used by evaluation/surrogates/run_all.py.
+
+Returned structure:
 {
     "module": "error_maps",
     "status": "passed" | "failed",
@@ -35,6 +43,7 @@ Standardized output:
     }
 }
 """
+
 
 import numpy as np
 

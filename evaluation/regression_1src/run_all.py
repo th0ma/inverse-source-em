@@ -1,16 +1,28 @@
 """
 Run all evaluation modules for the 1‑source regression model.
 
-Loads:
-- dataset: data/regression/dataset_1src.npz
-- model:   checkpoints/regression_1src/best_epoch_xxxx.pth
+This script loads:
+- the dataset: data/regression_1src/dataset_1src.npz
+- the latest model checkpoint: models/regression_1src/best_epoch_xxxx.pth
 
-Runs:
-- accuracy
-- error_tables
-- noise_robustness
-- timing
+It then executes the full evaluation suite:
+- accuracy (absolute and relative errors)
+- error tables (full error arrays + summaries)
+- noise robustness (performance under Gaussian noise)
+- timing (inference speed and batch‑scaling)
+
+Returned structure:
+{
+    "overall_status": "passed" | "failed",
+    "results": {
+        "accuracy": {...},
+        "error_tables": {...},
+        "noise_robustness": {...},
+        "timing": {...}
+    }
+}
 """
+
 
 import os
 import numpy as np

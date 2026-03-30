@@ -1,14 +1,20 @@
 """
-Timing evaluation for 2‑source regression model.
+Timing evaluation for the 2‑source regression model.
 
-Measures:
+This module measures:
 - mean inference time per batch
 - mean inference time per sample
 
-Handles permutation invariance internally (same logic as accuracy.py),
-but only for correctness — timing is dominated by forward().
+Permutation invariance is handled internally using the same logic as the
+accuracy module, but this does not affect timing since the dominant cost
+is the forward pass of the model.
 
-Returns:
+For a batch of size $B$, the mean sample time is computed as:
+$$
+t_{\mathrm{sample}} = \frac{t_{\mathrm{batch}}}{B}
+$$
+
+Returned structure:
 {
     "module": "timing",
     "status": "passed" | "failed",
@@ -18,6 +24,7 @@ Returns:
     }
 }
 """
+
 
 import time
 import numpy as np

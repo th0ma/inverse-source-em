@@ -1,14 +1,22 @@
 """
 Dataset generator for Regression Problem I (single-source localization).
 
-This module:
-- loads the canonical surrogate forward model
-- computes E_real, E_imag, H_real, H_imag for each source
-- performs 2-pass normalization (global maxima)
-- assembles the dataset (X, Y)
-- saves dataset_1src.npz
+This module constructs the full inverse dataset for the 1‑source localization
+problem using the surrogate forward model. The pipeline performs:
 
-The output is compatible with dataset_1src.py and the training pipeline.
+1. Sampling of random single-source configurations.
+2. Surrogate-based forward evaluation of Esurf and Hsurf.
+3. Two-pass normalization:
+       - Pass 1: compute global maxima (ymax_E, ymax_H)
+       - Pass 2: normalize all samples using these maxima
+4. Assembly of the dataset:
+       X : (N, 4*M)  → normalized [E_r, E_i, H_r, H_i]
+       Y : (N, 3)    → true parameters [x, y, I]
+5. Saving the dataset in compressed NPZ format.
+
+The output is fully compatible with:
+- Regression1SrcDataset (dataset_1src.py)
+- the training pipeline for Problem I
 """
 
 import os
@@ -26,11 +34,23 @@ from inverse_source_em.physics.physics_tm import PhysicsTM
 
 def compute_fields_surrogate(sur, rho_s, phi_s, theta_obs):
     """
-    Compute Esurf, Hsurf for a single source using the surrogate model.
+    Compute Esurf and Hsurf for a single source using the surrogate model.
+
+    Parameters
+    ----------
+    sur : SurrogateEM
+        Unified surrogate forward model.
+    rho_s : float
+        Radial coordinate of the source.
+    phi_s : float
+        Angular coordinate of the source.
+    theta_obs : ndarray of shape (M,)
+        Observation angles.
 
     Returns
     -------
-    E_real, E_imag, H_real, H_imag : (M,) arrays
+    E_real, E_imag, H_real, H_imag : ndarray of shape (M,)
+        Real and imaginary parts of the boundary fields.
     """
     E = sur.Esurf(rho_s, phi_s, theta_obs)
     H = sur.Hsurf(rho_s, phi_s, theta_obs)
@@ -56,28 +76,43 @@ def build_dataset_1src(
     rho_max: float = 0.95,
 ):
     """
-    Build inverse dataset for Regression Problem I.
+    Build the inverse dataset for Regression Problem I (single-source localization).
+
+    This function performs the full 2‑pass dataset construction:
+    - Pass 1: compute global maxima for normalization
+    - Pass 2: compute normalized fields and assemble X, Y
 
     Parameters
     ----------
     n_sources : int
-        Number of samples.
+        Number of samples to generate.
     num_angles : int
         Number of observation angles.
     path_E, path_H : str
-        Paths to surrogate .pth files.
+        Paths to the trained surrogate .pth files for Esurf and Hsurf.
     rho_min, rho_max : float
-        Radial sampling limits.
+        Radial sampling limits for the source.
 
     Returns
     -------
-    X : (N, 4*M) ndarray
-    Y : (N, 3) ndarray
-    theta_obs : (M,) ndarray
-    ymax_E, ymax_H : float
+    X : ndarray of shape (N, 4*M)
+        Normalized boundary fields.
+    Y : ndarray of shape (N, 3)
+        True source parameters [x, y, I].
+    theta_obs : ndarray of shape (M,)
+        Observation angles.
+    ymax_E : float
+        Global maximum used to normalize E_r and E_i.
+    ymax_H : float
+        Global maximum used to normalize H_r and H_i.
     R : float
-    """
+        Physical radius of the domain.
 
+    Notes
+    -----
+    - Intensities are fixed to I = 1.0 but included in Y for completeness.
+    - All computations use float64 for numerical stability.
+    """
     # Instantiate physics + surrogate
     phys = PhysicsTM()
     sur = SurrogateEM(path_E=path_E, path_H=path_H)
@@ -156,7 +191,29 @@ def save_dataset_1src(
     R,
 ):
     """
-    Save dataset_1src.npz in compressed format.
+    Save the 1‑source regression dataset in compressed NPZ format.
+
+    Parameters
+    ----------
+    save_path : str
+        Output file path (e.g., "data/regression_1src/dataset_1src.npz").
+    X : ndarray
+        Normalized boundary fields, shape (N, 4*M).
+    Y : ndarray
+        True parameters, shape (N, 3).
+    theta_obs : ndarray
+        Observation angles.
+    ymax_E : float
+        Normalization constant for E channels.
+    ymax_H : float
+        Normalization constant for H channels.
+    R : float
+        Physical radius.
+
+    Notes
+    -----
+    - The directory is created automatically if needed.
+    - Uses NumPy's compressed NPZ format.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
 

@@ -1,11 +1,13 @@
 """
-Accuracy Evaluation for Source-Count Classification Model
+Accuracy Evaluation for Source-Count Classification Model.
 
-This module evaluates:
-- overall accuracy
-- per-class accuracy
-- macro accuracy
-- weighted accuracy
+This module evaluates the predictive performance of a trained classifier for
+source-count estimation (S ∈ {1,2,3,4,5}). It computes:
+
+    - overall accuracy
+    - per-class accuracy
+    - macro accuracy (unweighted mean over classes)
+    - weighted accuracy (class-frequency weighted)
 
 Returned structure:
 {
@@ -18,7 +20,13 @@ Returned structure:
         "weighted_accuracy": ...
     }
 }
+
+Notes:
+    - Inputs X_test and y_test must be NumPy arrays.
+    - The model must output logits of shape (B, num_classes).
+    - Status is 'failed' only if NaN/Inf values appear in the metrics.
 """
+
 
 import numpy as np
 import torch

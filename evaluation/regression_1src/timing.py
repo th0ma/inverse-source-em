@@ -1,10 +1,21 @@
 """
-Timing evaluation for 1‑source regression model.
+Timing evaluation for the 1‑source regression model.
 
-Computes:
-- time_per_sample_ms
-- throughput_samples_per_sec
-- batch_scaling (time per sample for batch sizes 1, 8, 32, 128)
+This module measures inference speed by computing:
+
+- time per sample (in milliseconds), using batch size 32 as reference:
+  $$
+  \text{time\_per\_sample\_ms} = 1000 \times \text{time\_per\_sample}
+  $$
+
+- throughput (samples per second):
+  $$
+  \text{throughput} = \dfrac{1}{\text{time\_per\_sample}}
+  $$
+
+- batch‑scaling performance for batch sizes
+  $\left(1,\,8,\,32,\,128\right)$:
+  time per sample as a function of batch size
 
 Returned structure:
 {
@@ -22,6 +33,7 @@ Returned structure:
     }
 }
 """
+
 
 import time
 import numpy as np

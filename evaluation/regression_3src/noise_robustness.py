@@ -1,3 +1,40 @@
+"""
+noise_robustness.py — 3‑source regression noise robustness evaluation.
+
+This module evaluates the stability of the 3‑source regression model under
+additive noise applied to random observation angles. Each evaluation sample
+contains three point sources with polar coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+For each noise level $\eta$, a fraction $\eta$ of the observation angles is
+perturbed by Gaussian noise:
+$$
+X_{\mathrm{noisy}} = X + \sigma\,\varepsilon,
+\qquad
+\varepsilon \sim \mathcal{N}\left(0,\\,1\right)
+$$
+
+The model predicts $\rho$, $\cos\phi$, $\sin\phi$ for each source, which are
+converted to Cartesian coordinates:
+$$
+x = \rho \cos\phi, \qquad y = \rho \sin\phi
+$$
+
+For each noise level, the module reports:
+- $R^2$ scores for sources A, B, C  
+- mean absolute error (MAE)  
+- error percentiles (50, 75, 90, 95, 99)  
+- maximum Cartesian error  
+
+Run as a standalone script:
+    python noise_robustness.py
+"""
+
+
 # ============================================================
 # noise_robustness.py — 3-source regression noise robustness
 # ============================================================

@@ -1,3 +1,33 @@
+"""
+timing.py — 3‑source regression timing benchmarks.
+
+This module measures the computational performance of the 3‑source regression
+pipeline. Each evaluation sample contains three point sources with polar
+coordinates
+$\left(\rho_1,\\,\phi_1\right)$,
+$\left(\rho_2,\\,\phi_2\right)$,
+$\left(\rho_3,\\,\phi_3\right)$
+and strengths $I_1, I_2, I_3$, together with the boundary fields
+$E_r,\\,E_i,\\,H_r,\\,H_i$ computed by the canonical surrogate models.
+
+The benchmark reports the time required for:
+1. loading the trained model and scalers  
+2. loading the surrogate forward model  
+3. generating the evaluation dataset  
+4. scaling the inputs  
+5. performing the model forward pass  
+6. converting predictions to Cartesian coordinates  
+
+The throughput is computed as:
+$$
+\text{throughput} = \frac{N_{\mathrm{eval}}}{t_{\mathrm{forward}}}
+$$
+
+Run as a standalone script:
+    python timing.py
+"""
+
+
 # ============================================================
 # timing.py — 3-source regression timing benchmarks
 # ============================================================
