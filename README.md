@@ -2,7 +2,7 @@
 
 **Deep Learning Methods for Electromagnetic Inverse Source Problems**
 
-Version: **0.9.0-beta**
+Version: **0.1.0**
 
 This repository provides a complete scientific machine learning framework for
 electromagnetic inverse source problems in cylindrical geometries. It combines:
@@ -178,15 +178,31 @@ Run the full evaluation:
 
 ## 6. Installation
 
-### From source
+### Install from PyPI (recommended)
 
-    git clone https://github.com/<username>/inverse-source-em.git
+The library is available as a pip-installable package:
+
+    pip install inverse-source-em
+
+This installs the full framework, including:
+- surrogate EM models (inference-ready)
+- physics solvers
+- dataset utilities
+- training and evaluation pipelines
+
+### Install from source (development mode)
+
+    git clone https://github.com/th0ma/inverse-source-em.git
     cd inverse-source-em
     pip install -e .
 
 ### Requirements
 
+All dependencies are automatically installed via pip.  
+For manual installation:
+
     pip install -r requirements.txt
+
 
 ---
 
@@ -274,16 +290,17 @@ Hellenic Open University
 
 ## 12. Roadmap
 
-- Surrogate pipeline (canonical)  
-- Classification pipeline  
-- Regression 1src  
-- Regression 2src  
-- Regression 3src  
-- Unified evaluation suites  
-- GitHub release v0.9.0-beta  
-- pip packaging  
-- Regression IV (variable number of sources)  
-- v1.0.0 stable release  
+### Completed
+- Canonical surrogate pipeline (frozen)
+- Classification pipeline (1–5 sources)
+- Regression pipelines: 1src, 2src, 3src
+- Unified evaluation suites for all tasks
+- GitHub release v0.1.0
+- PyPI packaging and distribution
+- Documentation unification (GitHub Wiki)
+- Theory summary page (forward & inverse problem)
+- API reference documentation
+- Example-driven tutorials
 
 ---
 
